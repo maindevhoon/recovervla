@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recovervla"
+version = "0.1.0"
+description = "Recovery-aware bimanual task planning for the Intel Physical AI challenge"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+sim = ["mujoco==3.3.7", "numpy>=1.26,<3"]
+train = ["lerobot==0.4.4"]
+
+[project.scripts]
+recovervla-eval = "recovervla.evaluation:main"
+recovervla-collect = "recovervla.collect:main"
+
+[tool.setuptools.package-data]
+recovervla = ["assets/*.json", "assets/NOTICE"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

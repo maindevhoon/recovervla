@@ -1,0 +1,8 @@
+.git
+.env*
+datasets
+artifacts
+outputs
+checkpoints
+**/__pycache__
+.venv
