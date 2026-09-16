@@ -38,7 +38,8 @@ def build(robot_dir: Path, seed: int):
     rng = np.random.default_rng(seed)
     root = ET.Element("mujoco", model="recovervla")
     ET.SubElement(root, "compiler", angle="radian", autolimits="true")
-    ET.SubElement(root, "option", timestep="0.002", integrator="implicitfast", iterations="50")
+    ET.SubElement(root, "option", timestep="0.002", integrator="implicitfast",
+                  iterations="50", cone="elliptic", impratio="10", noslip_iterations="3")
     assets = ET.SubElement(root, "asset")
     defaults = ET.SubElement(root, "default")
     ET.SubElement(defaults, "geom", friction="0.8 0.005 0.0001")
@@ -80,11 +81,12 @@ def build(robot_dir: Path, seed: int):
     # Lift the handle above the drawer lip and into the SO-101's reachable
     # near-table workspace. The former 6.5 cm world height was 2.65 cm beyond
     # the closest deterministic IK solution on remote MuJoCo validation.
-    # condim=6 and gripper-matched solref make pinch/hook contacts stickier
-    # without a hidden weld, which the expert spec forbids.
-    geom(drawer, "drawer_handle", "capsule", (.012, .035), (0, -.08, .045),
-         euler="0 1.5708 0", mass="0.02", friction="2.5 .05 .001",
-         condim="6", solref="0.01 1", priority="1")
+    # A wide box plus a front lip gives the gripper a paddle surface. Contact
+    # still has to move the joint; there is no hidden weld.
+    handle_kwargs = dict(mass="0.025", friction="2.5 .05 .001",
+                         condim="6", solref="0.01 1", priority="1")
+    geom(drawer, "drawer_handle", "box", (.04, .012, .016), (0, -.08, .045), **handle_kwargs)
+    geom(drawer, "drawer_handle_lip", "box", (.04, .006, .02), (0, -.098, .04), **handle_kwargs)
     ET.SubElement(drawer, "site", name="drawer_grasp", pos="0 -.08 .045")
     positions = {"plate": (-.1, .14, .067), "mug": (.12, .02, .032), "bottle": (-.12, -.08, .032)}
     sampled = {}

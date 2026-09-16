@@ -32,38 +32,33 @@ class Expert:
         self.move(command, .5)
 
     def _open_drawer(self):
-        point = self.scene.site("drawer_grasp")
-        self.grip("left", False)
-        try:
-            self.reach("left", point + np.array([0.0, 0.0, 0.05]))
-        except RuntimeError:
-            self.reach("left", point + np.array([0.0, -0.04, 0.02]))
-        grasped = False
-        for roll in (None, -1.2, 1.2, -2.0, 2.0, 0.6, -0.6):
+        # Pinching the thin handle failed remotely: the fingertip site reached
+        # the handle, then pulled 1 cm in -Y with no contact. Sweep a closed
+        # gripper from behind the handle through it so the jaws paddle the lip.
+        point = np.asarray(self.scene.site("drawer_grasp"), float)
+        behind = point + np.array([0.0, 0.022, 0.004])
+        front = point + np.array([0.0, -0.075, 0.0])
+        last_error = None
+        for roll in (None, 1.2, -1.2, 2.0, -2.0):
             try:
                 self.grip("left", False)
-                self.reach("left", point, wrist_roll=roll)
+                try:
+                    self.reach("left", behind + np.array([0.0, 0.0, 0.04]), wrist_roll=roll)
+                except RuntimeError:
+                    pass
+                self.reach("left", behind, wrist_roll=roll)
                 self.grip("left", True)
-            except RuntimeError:
-                continue
-            if (self.scene.contact("left", "drawer") or
-                    float(self.scene.data.joint("drawer_slide").qpos[0]) > 0.004):
-                grasped = True
-                break
-        if not grasped:
-            raise RuntimeError(f"Drawer grasp made no contact: {self.scene.snapshot()}")
-        for _ in range(12):
-            if float(self.scene.data.joint("drawer_slide").qpos[0]) >= 0.05:
-                self.grip("left", False)
-                return
-            handle = self.scene.site("drawer_grasp")
-            try:
-                self.reach("left", handle + np.array([0.0, -0.012, 0.0]))
+                for frac in np.linspace(0.2, 1.0, 6):
+                    self.reach("left", behind + frac * (front - behind), wrist_roll=roll)
+                    if float(self.scene.data.joint("drawer_slide").qpos[0]) >= 0.05:
+                        self.grip("left", False)
+                        return
             except RuntimeError as error:
-                raise RuntimeError(
-                    f"Drawer pull IK failed: {error}; {self.scene.snapshot()}"
-                ) from error
-        raise RuntimeError(f"Drawer did not open by contact: {self.scene.snapshot()}")
+                last_error = error
+                continue
+        raise RuntimeError(
+            f"Drawer did not open by contact: {self.scene.snapshot()}; last={last_error}"
+        )
 
     def grasp(self, arm, target):
         point = self.scene.site(target + "_grasp")

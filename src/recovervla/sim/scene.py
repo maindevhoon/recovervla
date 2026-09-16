@@ -56,11 +56,23 @@ class Scene:
     def body(self, name):
         return self.data.body(name).xpos.copy()
 
+    def _on_gripper(self, arm, geom_id):
+        gripper = self.model.body(arm + "_gripper").id
+        body = int(self.model.geom_bodyid[geom_id])
+        while body > 0:
+            if body == gripper:
+                return True
+            body = int(self.model.body_parentid[body])
+        return False
+
     def contact(self, arm, target):
+        # Unnamed jaw meshes still belong to the gripper body tree; name
+        # matching on "jaw" missed those contacts on remote validation.
         for contact in self.data.contact:
+            geoms = (contact.geom1, contact.geom2)
             names = [mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, g) or ""
-                     for g in (contact.geom1, contact.geom2)]
-            if any(n.startswith(arm + "_") and "jaw" in n for n in names) and any(n.startswith(target + "_") for n in names):
+                     for g in geoms]
+            if any(self._on_gripper(arm, g) for g in geoms) and any(n.startswith(target + "_") for n in names):
                 return True
         return False
 
@@ -75,6 +87,10 @@ class Scene:
     def snapshot(self):
         gripper = self.site("left_gripperframe")
         handle = self.site("drawer_grasp")
+        contacts = []
+        for contact in self.data.contact[:min(int(self.data.ncon), 8)]:
+            contacts.append([mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, g) or ""
+                             for g in (contact.geom1, contact.geom2)])
         return {
             "drawer_qpos": float(self.data.joint("drawer_slide").qpos[0]),
             "handle": handle.tolist(),
@@ -82,4 +98,6 @@ class Scene:
             "handle_distance": float(np.linalg.norm(gripper - handle)),
             "drawer_contact": self.contact("left", "drawer"),
             "left_gripper_cmd": float(self.command[5]),
+            "ncon": int(self.data.ncon),
+            "contacts": contacts,
         }
