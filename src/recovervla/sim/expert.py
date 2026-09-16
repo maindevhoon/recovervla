@@ -1,20 +1,33 @@
 """Initial contact-based expert. Requires remote grasp and orientation tuning."""
 import numpy as np
+from time import monotonic
 from .ik import solve
 from .schema import FPS
 from ..types import Skill
 
 
 class Expert:
-    def __init__(self, scene, record):
+    def __init__(self, scene, record, progress=None, timeout=120):
         self.scene, self.record = scene, record
         self.history = []
+        self.progress = progress
+        self.deadline = monotonic() + timeout
+
         self.zones = {"plate": np.array([-.04, -.12, .033]), "mug": np.array([.09, -.12, .033])}
+
+    def report(self, event, **fields):
+        if self.progress:
+            self.progress(event, **fields)
+
+    def check_budget(self):
+        if monotonic() >= self.deadline:
+            raise TimeoutError("Expert wall-clock budget exhausted")
 
     def move(self, command, seconds=1.5):
         start = self.scene.command.copy()
         steps = max(round(seconds * FPS), int(np.ceil(np.max(abs(command - start)) / .025)))
         for fraction in np.linspace(1 / steps, 1, steps):
+            self.check_budget()
             action = start + fraction * (command - start)
             if self.record is not None:
                 frame = self.scene.observe()
@@ -23,7 +36,11 @@ class Expert:
             self.scene.step(action)
 
     def reach(self, arm, target, wrist_roll=None):
+        self.check_budget()
+        start = monotonic()
+        self.report("reach_start", arm=arm, target=np.asarray(target).tolist())
         self.move(solve(self.scene, arm, target, wrist_roll=wrist_roll))
+        self.report("reach_end", seconds=monotonic() - start, snapshot=self.scene.snapshot())
 
     def grip(self, arm, closed):
         command = self.scene.command.copy()
@@ -40,6 +57,7 @@ class Expert:
         front = point + np.array([0.0, -0.075, 0.0])
         last_error = None
         for roll in (None, 1.2, -1.2, 2.0, -2.0):
+            self.report("drawer_attempt", wrist_roll=roll)
             try:
                 self.grip("left", False)
                 try:
@@ -54,6 +72,7 @@ class Expert:
                         self.grip("left", False)
                         return
             except RuntimeError as error:
+                self.report("drawer_attempt_failed", error=str(error))
                 last_error = error
                 continue
         raise RuntimeError(
@@ -73,6 +92,8 @@ class Expert:
 
     def run(self, plan):
         for action in plan.actions:
+            self.check_budget()
+            self.report("skill_start", skill=action.skill.value, target=action.target)
             arm, target = action.arm.value, action.target
             if action.skill == Skill.OPEN_DRAWER:
                 self._open_drawer()

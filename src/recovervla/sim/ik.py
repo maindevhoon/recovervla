@@ -31,7 +31,11 @@ def solve(scene, arm, target, max_iterations=200, tolerance=.004, wrist_roll=Non
         scratch.qpos[:] = scene.data.qpos
         scratch.qpos[qadr] = np.clip(seed, scene.limits[indices, 0], scene.limits[indices, 1])
         for _ in range(max_iterations):
-            mujoco.mj_forward(model, scratch)
+            # IK needs transforms and joint axes only. Full mj_forward also
+            # solves contacts for the vessels and 60 free particles on every
+            # iteration, including unreachable candidates.
+            mujoco.mj_kinematics(model, scratch)
+            mujoco.mj_comPos(model, scratch)
             error = np.asarray(target) - scratch.site_xpos[site_id]
             norm = float(np.linalg.norm(error))
             best_error = min(best_error, norm)
