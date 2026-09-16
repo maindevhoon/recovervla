@@ -11,15 +11,17 @@ from recovervla.sim.ik import solve
 from recovervla.sim.scene import Scene
 
 scene = Scene(Path("artifacts/so101"), 100)
+targets = [(-.06, .06, .10), (-.04, .06, .10), (0, .06, .10),
+           (-.10, .10, .10), (-.10, .14, .10), (-.10, 0, .10),
+           (-.16, .14, .10), (-.06, .14, .10)]
 reachable = []
-for x in (-.28, -.24, -.20, -.16, -.12, -.08):
-    for y in (-.02, .02, .06, .10, .14, .18):
-        for z in (.07, .10, .13, .16, .20):
-            try:
-                solve(scene, "left", (x, y, z))
-            except RuntimeError:
-                continue
-            reachable.append((x, y, z))
+for target in targets:
+    try:
+        solve(scene, "left", target)
+    except RuntimeError as error:
+        print(error)
+        continue
+    reachable.append(target)
 scene.close()
 print(reachable)
 if not reachable:
