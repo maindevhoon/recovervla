@@ -109,8 +109,8 @@ def build(robot_dir: Path, seed: int):
             # contacted only one face and swept it sideways. Give this plate
             # a small raised rim section that can be pinched from above.
             geom(body, "plate_grip_rim", "box", (.005, .018, .012),
-                 (-.038, 0, .012), mass="0.004", rgba="0.94 0.94 0.94 1")
-            ET.SubElement(body, "site", name="plate_grasp", pos="-.038 0 .015")
+                 (.038, 0, .012), mass="0.004", rgba="0.94 0.94 0.94 1")
+            ET.SubElement(body, "site", name="plate_grasp", pos=".038 0 .015")
         else:
             body = vessel(world, name, pos, .028 if name == "mug" else .023, .055 if name == "mug" else .10)
         mass_scale, friction = rng.uniform(.8, 1.2), rng.uniform(.6, 1.1)
