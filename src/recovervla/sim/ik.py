@@ -54,7 +54,11 @@ def solve(scene, arm, target, max_iterations=200, tolerance=.004, wrist_roll=Non
             j = jac[:, dadr]
             if direction is not None:
                 # Site X points from the wrist toward the fingertips.
-                j = np.vstack((j, .1 * jacrot[:, dadr]))
+                # Aligning one axis constrains two rotational DOFs. Leave
+                # rotation around that axis free: SO-101 has only five arm
+                # joints, so a third rotational constraint overconstrains IK.
+                projector = np.eye(3) - np.outer(axis, axis)
+                j = np.vstack((j, .1 * projector @ jacrot[:, dadr]))
                 error = np.r_[error, .1 * np.cross(axis, direction)]
             delta = j.T @ np.linalg.solve(j @ j.T + .0001 * np.eye(len(error)), error)
             scratch.qpos[qadr] = np.clip(scratch.qpos[qadr] + np.clip(delta, -.08, .08),
