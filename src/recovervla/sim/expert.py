@@ -140,7 +140,10 @@ class Expert:
             elif action.skill == Skill.POUR:
                 self.report("pour_start", contained=self.scene.contained(),
                             snapshot=self.scene.snapshot())
-                self.reach("left", self.scene.body("mug") + [0, 0, .16])
+                # The gripper holds the neck, not the bottle origin. Aim the
+                # held pose above the mug instead of the raw bottle body.
+                offset = self.scene.site("left_gripperframe") - self.scene.body("bottle")
+                self.reach("left", self.scene.body("mug") + np.array([0.0, 0.0, 0.12]) + offset)
                 command = self.scene.command.copy()
                 command[4] = np.clip(command[4] + 1.5, *self.scene.limits[4])
                 self.move(command, 2)
