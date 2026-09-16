@@ -21,6 +21,8 @@ Inspect `datasets/smoke/report.json`. IK, contact, or transfer failures require
 adjusting the scene/grasp waypoints in code and collecting into a new directory.
 Position-only IK does not yet enforce grasp orientation or collision-free paths.
 The current bottleneck is physical expert validation, not GPU training speed.
+`python scripts/validate_expert.py` is the physics-only gate and does not create a
+renderer. GitHub Actions workflow `expert-gate` runs that command on Ubuntu.
 
 After a successful smoke run, collect independent training and validation roots:
 

@@ -1,0 +1,26 @@
+name: expert-gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      attempts:
+        description: Number of consecutive seeds starting at 100
+        default: "1"
+
+jobs:
+  physics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install simulation extra
+        run: pip install -e ".[sim]"
+      - name: Fetch pinned robot assets
+        run: python scripts/fetch_assets.py
+      - name: Stdlib and command tests
+        run: python -m unittest discover -s tests -v
+      - name: Physics-only expert gate
+        run: python scripts/validate_expert.py --attempts ${{ github.event.inputs.attempts || '1' }}

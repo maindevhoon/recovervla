@@ -22,13 +22,48 @@ class Expert:
                 self.record(frame)
             self.scene.step(action)
 
-    def reach(self, arm, target):
-        self.move(solve(self.scene, arm, target))
+    def reach(self, arm, target, wrist_roll=None):
+        self.move(solve(self.scene, arm, target, wrist_roll=wrist_roll))
 
     def grip(self, arm, closed):
         command = self.scene.command.copy()
-        command[5 if arm == "left" else 11] = 0 if closed else 1.0
+        index = 5 if arm == "left" else 11
+        command[index] = self.scene.limits[index, 0 if closed else 1]
         self.move(command, .5)
+
+    def _open_drawer(self):
+        point = self.scene.site("drawer_grasp")
+        self.grip("left", False)
+        try:
+            self.reach("left", point + np.array([0.0, 0.0, 0.05]))
+        except RuntimeError:
+            self.reach("left", point + np.array([0.0, -0.04, 0.02]))
+        grasped = False
+        for roll in (None, -1.2, 1.2, -2.0, 2.0, 0.6, -0.6):
+            try:
+                self.grip("left", False)
+                self.reach("left", point, wrist_roll=roll)
+                self.grip("left", True)
+            except RuntimeError:
+                continue
+            if (self.scene.contact("left", "drawer") or
+                    float(self.scene.data.joint("drawer_slide").qpos[0]) > 0.004):
+                grasped = True
+                break
+        if not grasped:
+            raise RuntimeError(f"Drawer grasp made no contact: {self.scene.snapshot()}")
+        for _ in range(12):
+            if float(self.scene.data.joint("drawer_slide").qpos[0]) >= 0.05:
+                self.grip("left", False)
+                return
+            handle = self.scene.site("drawer_grasp")
+            try:
+                self.reach("left", handle + np.array([0.0, -0.012, 0.0]))
+            except RuntimeError as error:
+                raise RuntimeError(
+                    f"Drawer pull IK failed: {error}; {self.scene.snapshot()}"
+                ) from error
+        raise RuntimeError(f"Drawer did not open by contact: {self.scene.snapshot()}")
 
     def grasp(self, arm, target):
         point = self.scene.site(target + "_grasp")
@@ -45,15 +80,7 @@ class Expert:
         for action in plan.actions:
             arm, target = action.arm.value, action.target
             if action.skill == Skill.OPEN_DRAWER:
-                point = self.scene.site("drawer_grasp")
-                self.grip("left", False)
-                self.reach("left", point + [0, -.04, 0])
-                self.reach("left", point)
-                self.grip("left", True)
-                self.reach("left", point + [0, -.08, 0])
-                if self.scene.data.joint("drawer_slide").qpos[0] < .05:
-                    raise RuntimeError("Drawer did not open by contact")
-                self.grip("left", False)
+                self._open_drawer()
             elif action.skill == Skill.GRASP:
                 self.grasp(arm, target)
             elif action.skill == Skill.PLACE:

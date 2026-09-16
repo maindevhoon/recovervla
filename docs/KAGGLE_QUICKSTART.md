@@ -46,7 +46,9 @@ subprocess.run([sys.executable, "scripts/validate_expert.py", "--attempts", "3"]
 ```
 
 This skips camera rendering and video encoding, making failed-waypoint tuning much
-faster. Continue only after at least one complete physical sequence succeeds.
+faster. `validate_expert.py` constructs the scene without a MuJoCo renderer, so the
+gate does not need EGL. Continue only after at least one complete physical sequence
+succeeds. On GitHub, `expert-gate` runs the same command on Ubuntu.
 
 ## Cell 4 — one encoded demonstration gate
 

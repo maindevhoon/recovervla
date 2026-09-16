@@ -5,7 +5,7 @@ from .schema import CAMERAS, FPS, JOINTS, RESOLUTION
 
 
 class Scene:
-    def __init__(self, robot_dir, seed):
+    def __init__(self, robot_dir, seed, render=True):
         xml, self.variation = build(robot_dir, seed)
         self.model = mujoco.MjModel.from_xml_string(xml)
         self.data = mujoco.MjData(self.model)
@@ -15,17 +15,24 @@ class Scene:
         self.aids = [self.model.actuator(name).id for name in JOINTS]
         self.limits = self.model.actuator_ctrlrange[self.aids].copy()
         self.command = np.zeros(12)
-        self.command[[5, 11]] = 1.0
+        # Start fully open using the SO-101 actuator limits, not a unit guess.
+        self.command[[5, 11]] = self.limits[[5, 11], 1]
         self.data.qpos[self.qadr] = self.command
         mujoco.mj_forward(self.model, self.data)
-        self.renderer = mujoco.Renderer(self.model, height=RESOLUTION, width=RESOLUTION)
+        self.renderer = None
+        if render:
+            self.renderer = mujoco.Renderer(self.model, height=RESOLUTION, width=RESOLUTION)
         for _ in range(20):
             self.step(self.command)
 
     def close(self):
-        self.renderer.close()
+        if self.renderer is not None:
+            self.renderer.close()
+            self.renderer = None
 
     def observe(self):
+        if self.renderer is None:
+            raise RuntimeError("Scene was created without a renderer")
         frame = {"observation.state": self.data.qpos[self.qadr].astype(np.float32).copy()}
         for camera in CAMERAS:
             self.renderer.update_scene(self.data, camera=camera)
@@ -64,3 +71,15 @@ class Scene:
         local = (particles - origin) @ rotation
         return int(((np.linalg.norm(local[:, :2], axis=1) < .024) &
                     (local[:, 2] > .007) & (local[:, 2] < .051)).sum())
+
+    def snapshot(self):
+        gripper = self.site("left_gripperframe")
+        handle = self.site("drawer_grasp")
+        return {
+            "drawer_qpos": float(self.data.joint("drawer_slide").qpos[0]),
+            "handle": handle.tolist(),
+            "left_gripper": gripper.tolist(),
+            "handle_distance": float(np.linalg.norm(gripper - handle)),
+            "drawer_contact": self.contact("left", "drawer"),
+            "left_gripper_cmd": float(self.command[5]),
+        }

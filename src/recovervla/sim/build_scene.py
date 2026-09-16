@@ -71,7 +71,8 @@ def build(robot_dir: Path, seed: int):
     geom(world, "table", "box", (.45, .35, .025), rgba="0.5 0.35 0.2 1")
     decorate(root, world, assets)
     drawer = ET.SubElement(world, "body", name="drawer", pos="-0.1 0.08 0.05")
-    ET.SubElement(drawer, "joint", name="drawer_slide", type="slide", axis="0 -1 0", range="0 .09", damping="0.4")
+    ET.SubElement(drawer, "joint", name="drawer_slide", type="slide", axis="0 -1 0",
+                  range="0 .09", damping="0.2")
     geom(drawer, "drawer_floor", "box", (.08, .07, .006), mass="0.08")
     geom(drawer, "drawer_back", "box", (.08, .006, .02), (0, .07, .02), mass="0.02")
     for side in (-1, 1):
@@ -79,8 +80,11 @@ def build(robot_dir: Path, seed: int):
     # Lift the handle above the drawer lip and into the SO-101's reachable
     # near-table workspace. The former 6.5 cm world height was 2.65 cm beyond
     # the closest deterministic IK solution on remote MuJoCo validation.
+    # condim=6 and gripper-matched solref make pinch/hook contacts stickier
+    # without a hidden weld, which the expert spec forbids.
     geom(drawer, "drawer_handle", "capsule", (.012, .035), (0, -.08, .045),
-         euler="0 1.5708 0", mass="0.02", friction="2 .01 .001")
+         euler="0 1.5708 0", mass="0.02", friction="2.5 .05 .001",
+         condim="6", solref="0.01 1", priority="1")
     ET.SubElement(drawer, "site", name="drawer_grasp", pos="0 -.08 .045")
     positions = {"plate": (-.1, .14, .067), "mug": (.12, .02, .032), "bottle": (-.12, -.08, .032)}
     sampled = {}

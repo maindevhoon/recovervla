@@ -3,7 +3,7 @@ import numpy as np
 import mujoco
 
 
-def solve(scene, arm, target, max_iterations=200, tolerance=.004):
+def solve(scene, arm, target, max_iterations=200, tolerance=.004, wrist_roll=None):
     model = scene.model
     indices = np.arange(0, 5) if arm == "left" else np.arange(6, 11)
     qadr, dadr = scene.qadr[indices], scene.dadr[indices]
@@ -14,10 +14,16 @@ def solve(scene, arm, target, max_iterations=200, tolerance=.004):
     # deterministic bent-arm seeds cover elbow-up/down configurations without
     # making reproducibility depend on a random optimizer.
     seeds = [current]
+    if wrist_roll is not None:
+        preferred = current.copy()
+        preferred[4] = wrist_roll
+        seeds.insert(0, preferred)
     for lift, elbow, wrist in ((-.8, .9, .7), (.8, -.9, -.7),
                                (-1.2, 1.3, .5), (1.2, -1.3, -.5)):
         seed = current.copy()
         seed[1:4] = (lift, elbow, wrist)
+        if wrist_roll is not None:
+            seed[4] = wrist_roll
         seeds.append(seed)
     best_error = float("inf")
     for seed in seeds:

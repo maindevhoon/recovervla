@@ -21,7 +21,7 @@ parser.add_argument("--attempts", type=int, default=3)
 args = parser.parse_args()
 rows = []
 for seed in range(args.start_seed, args.start_seed + args.attempts):
-    scene = Scene(args.robot_dir, seed)
+    scene = Scene(args.robot_dir, seed, render=False)
     expert = Expert(scene, None)
     row = {"seed": seed, "success": False}
     try:
@@ -32,6 +32,7 @@ for seed in range(args.start_seed, args.start_seed + args.attempts):
         row["success"] = True
     finally:
         row["completed_skills"] = expert.history
+        row["snapshot"] = scene.snapshot()
         scene.close()
         rows.append(row)
 print(json.dumps(rows, indent=2))
