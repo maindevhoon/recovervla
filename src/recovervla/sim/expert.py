@@ -6,9 +6,9 @@ from .schema import FPS
 from ..types import Skill
 
 
-# First-burst lead from Kaggle seeds 104/105: airborne mean minus mouth XY
-# at the instant beads leave. Post-dump mug chasing is slower than the fall.
-STREAM_LEAD = np.array([.044, -.021, 0.])
+# Modest +X/-Y lead for a controlled tilt. The 4 cm Kaggle offset was measured
+# on a bottle that had already dumped during a long joint-space carry.
+STREAM_LEAD = np.array([.02, -.01, 0.])
 
 
 def catch_gripper_target(mouth, gripper_minus_mug, vertical_gap, stream_lead=STREAM_LEAD,
@@ -245,18 +245,19 @@ class Expert:
             elif action.skill == Skill.POUR:
                 self.report("pour_start", contained=self.scene.contained(),
                             snapshot=self.scene.snapshot())
-                # Position-only re-acquire unwinds wrist_flex. Lock flex in IK
-                # so the neck stays over the mug while the bottle inverts.
-                above = self.scene.body("mug") + np.array([0.0, 0.0, 0.12])
+                # A single IK jump to mug+12 cm interpolates through a dump
+                # pose (GHA seed 104: bottle_contained 18→0 before tilt).
+                # Walk there in Cartesian steps with the grasp flex locked.
+                start = self.scene.site("left_gripperframe")
+                goal = self.scene.body("mug") + np.array([0.0, 0.0, 0.12])
+                flex = float(self.scene.command[3])
                 try:
-                    self.reach("left", above)
+                    for frac in np.linspace(0.25, 1.0, 4):
+                        self.reach("left", start + frac * (goal - start),
+                                   wrist_flex=flex, seconds=.45)
                 except RuntimeError as error:
                     self.report("pour_left_failed", error=str(error))
-                # Left tracking while holding the bottle misses the mug by
-                # ~6 cm. Park the mug on the measured first-burst stream
-                # *before* the bottle tips; a 0.13 s fall cannot be chased.
                 self._track_mug_under_mouth()
-                self._track_mug_under_mouth(seconds=.4)
                 self.report("pour_mug_under", gripper=self.scene.site("left_gripperframe").tolist(),
                             mouth=self.scene.site("bottle_grasp").tolist(),
                             mug=self.scene.body("mug").tolist(),
