@@ -110,16 +110,8 @@ class Expert:
         self.report("grasp_start", arm=arm, target=target, point=point.tolist(),
                     body=self.scene.body(target).tolist(), snapshot=self.scene.snapshot())
         self.grip(arm, False)
-        if target == "bottle":
-            # Top-down neck grasp cannot invert with 5 DOF (GHA 104: max
-            # bottle_up z 0.34, 16/19 beads stay in). Approach from +X so
-            # wrist_flex pitches the mouth down.
-            self.reach(arm, point + np.array([.05, 0.0, .02]),
-                       approach=[1.0, 0.0, 0.0], align=.35)
-            self.reach(arm, point, approach=[1.0, 0.0, 0.0], align=.35)
-        else:
-            self.reach(arm, point + [0, 0, .06])
-            self.reach(arm, point)
+        self.reach(arm, point + [0, 0, .06])
+        self.reach(arm, point)
         self.report("grasp_before_close", arm=arm, target=target,
                     body=self.scene.body(target).tolist(), snapshot=self.scene.snapshot())
         self.grip(arm, True)
