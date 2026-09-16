@@ -103,6 +103,7 @@ class Scene:
             "drawer_contact": self.contact("left", "drawer"),
             "left_gripper_cmd": float(self.command[5]),
             "objects": {name: self.body(name).tolist() for name in ("plate", "mug", "bottle")},
+            "contained": self.contained(),
             "ncon": int(self.data.ncon),
             "contacts": contacts,
             "deepest_contact": min(

@@ -87,11 +87,14 @@ class Expert:
 
     def grasp(self, arm, target):
         point = self.scene.site(target + "_grasp")
+        # Position-only IK tilts the tall bottle and dumps the frictionless
+        # beads before pour. Keep the tool axis downward for that object.
+        down = [0, 0, -1] if target == "bottle" else None
         self.report("grasp_start", arm=arm, target=target, point=point.tolist(),
                     body=self.scene.body(target).tolist(), snapshot=self.scene.snapshot())
         self.grip(arm, False)
-        self.reach(arm, point + [0, 0, .06])
-        self.reach(arm, point)
+        self.reach(arm, point + [0, 0, .06], approach=down)
+        self.reach(arm, point, approach=down)
         self.report("grasp_before_close", arm=arm, target=target,
                     body=self.scene.body(target).tolist(), snapshot=self.scene.snapshot())
         self.grip(arm, True)
@@ -99,7 +102,7 @@ class Expert:
                     body=self.scene.body(target).tolist(), contact=self.scene.contact(arm, target),
                     snapshot=self.scene.snapshot())
         before = self.scene.body(target)[2]
-        self.reach(arm, point + [0, 0, .06])
+        self.reach(arm, point + [0, 0, .06], approach=down)
         self.report("grasp_lifted", arm=arm, target=target,
                     body=self.scene.body(target).tolist(), contact=self.scene.contact(arm, target),
                     snapshot=self.scene.snapshot())
@@ -138,13 +141,17 @@ class Expert:
                         f"Place did not reach the table zone: {target} at {placed.tolist()}"
                     )
             elif action.skill == Skill.POUR:
+                self.report("pour_start", contained=self.scene.contained(),
+                            snapshot=self.scene.snapshot())
                 self.reach("left", self.scene.body("mug") + [0, 0, .16])
                 command = self.scene.command.copy()
                 command[4] = np.clip(command[4] + 1.5, *self.scene.limits[4])
                 self.move(command, 2)
                 self.move(command, 2)
-                if self.scene.contained() < 20:
-                    raise RuntimeError("Particle transfer below threshold")
+                contained = self.scene.contained()
+                self.report("pour_end", contained=contained, snapshot=self.scene.snapshot())
+                if contained < 20:
+                    raise RuntimeError(f"Particle transfer below threshold: {contained}")
             elif action.skill == Skill.VERIFY:
                 self.move(self.scene.command.copy(), 1)
                 for name, zone in self.zones.items():
