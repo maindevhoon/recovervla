@@ -37,12 +37,13 @@ class Expert:
                 self.record(frame)
             self.scene.step(action)
 
-    def reach(self, arm, target, wrist_roll=None, approach=None, wrist_flex=None):
+    def reach(self, arm, target, wrist_roll=None, approach=None, wrist_flex=None,
+              tolerance=.004):
         self.check_budget()
         start = monotonic()
         self.report("reach_start", arm=arm, target=np.asarray(target).tolist())
         command = solve(self.scene, arm, target, wrist_roll=wrist_roll, approach=approach,
-                        wrist_flex=wrist_flex)
+                        wrist_flex=wrist_flex, tolerance=tolerance)
         self.report("ik_ready", seconds=monotonic() - start)
         self.move(command)
         self.report("reach_end", seconds=monotonic() - start, snapshot=self.scene.snapshot())
@@ -156,15 +157,19 @@ class Expert:
                 # Wrist_flex only has ~1.6 rad of travel, which does not invert
                 # a top-held bottle. Point the tool axis down over the mug so
                 # the mouth faces gravity while the gripper stays put.
-                for approach in ([.4, 0, -.9], [.7, 0, -.7], [.9, 0, -.4], [0, 0, -1]):
+                for approach in ([.4, 0, -.9], [.7, 0, -.7], [0, 0, -1]):
                     try:
-                        self.reach("left", above(), approach=approach)
+                        # 4 mm is inside the 5-DOF singularity near a
+                        # downward pour; 2 cm still keeps the mouth over the mug.
+                        self.reach("left", above(), approach=approach, tolerance=.02)
                     except RuntimeError as error:
                         self.report("pour_approach_failed", approach=list(approach),
                                     error=str(error))
                 self.move(self.scene.command.copy(), 2.0)
                 contained = self.scene.contained()
-                self.report("pour_end", contained=contained, snapshot=self.scene.snapshot())
+                axis = self.scene.data.site("left_gripperframe").xmat.reshape(3, 3)[:, 0]
+                self.report("pour_end", contained=contained, tool_x=axis.tolist(),
+                            snapshot=self.scene.snapshot())
                 if contained < 20:
                     raise RuntimeError(f"Particle transfer below threshold: {contained}")
             elif action.skill == Skill.VERIFY:
