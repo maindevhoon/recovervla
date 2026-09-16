@@ -33,6 +33,18 @@ def vessel(world, name, pos, radius, height):
     return body
 
 
+def add_neck_tab(body, name, z):
+    # Open jaws stall on the tall bottle wall ~12 cm above the mid-body
+    # site. A small mouth tab is the same pinch target that lifted the plate.
+    for site in list(body.findall("site")):
+        if site.get("name") == name + "_grasp":
+            body.remove(site)
+    geom(body, name + "_grip_tab", "box", (.006, .006, .012),
+         (0, 0, z), mass="0.003", rgba="0.94 0.94 0.94 1")
+    ET.SubElement(body, "site", name=name + "_grasp", pos=f"0 0 {z}")
+    return body
+
+
 def build(robot_dir: Path, seed: int):
     import numpy as np
     rng = np.random.default_rng(seed)
@@ -113,7 +125,10 @@ def build(robot_dir: Path, seed: int):
                  (0, 0, .020), mass="0.004", rgba="0.94 0.94 0.94 1")
             ET.SubElement(body, "site", name="plate_grasp", pos="0 0 .020")
         else:
-            body = vessel(world, name, pos, .028 if name == "mug" else .023, .055 if name == "mug" else .10)
+            height = .055 if name == "mug" else .10
+            body = vessel(world, name, pos, .028 if name == "mug" else .023, height)
+            if name == "bottle":
+                add_neck_tab(body, name, height)
         mass_scale, friction = rng.uniform(.8, 1.2), rng.uniform(.6, 1.1)
         for node in body.findall("geom"):
             node.set("mass", str(float(node.attrib["mass"]) * mass_scale))
