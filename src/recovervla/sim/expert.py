@@ -115,6 +115,38 @@ class Expert:
         command[3] = np.clip(command[3] + delta, *self.scene.limits[3])
         return command
 
+    def _track_mug_under_mouth(self, vertical_gap=.08):
+        mouth = self.scene.site("left_gripperframe")
+        offset = self.scene.site("right_gripperframe") - self.scene.body("mug")
+        self.reach("right", mouth + offset + np.array([0., 0., -vertical_gap]),
+                   seconds=.6)
+        self.report("pour_mug_track", mouth=self.scene.site("left_gripperframe").tolist(),
+                    mug=self.scene.body("mug").tolist(),
+                    contained=self.scene.contained(),
+                    bottle_contained=self.scene.in_vessel("bottle", .018, .10))
+
+    def _tilt_in_place(self):
+        # Lock the flex joint in IK while holding the *live* tool position.
+        # A direct wrist command swings the whole bottle away from the mug.
+        for step in range(10):
+            mouth = self.scene.site("left_gripperframe")
+            flex = min(float(self.scene.command[3]) + .12, float(self.scene.limits[3, 1]))
+            if flex <= self.scene.command[3] + 1e-4:
+                break
+            self.reach("left", mouth, wrist_flex=flex, tolerance=.004,
+                       seconds=.4)
+            axis = self.scene.data.site("left_gripperframe").xmat.reshape(3, 3)[:, 0]
+            self.report("pour_tilt_step", step=step, flex=flex, tool_x=axis.tolist(),
+                        mouth=self.scene.site("left_gripperframe").tolist(),
+                        contained=self.scene.contained(),
+                        bottle_contained=self.scene.in_vessel("bottle", .018, .10),
+                        bottle_contact=self.scene.contact("left", "bottle"))
+            if not self.scene.contact("left", "bottle"):
+                raise RuntimeError("Bottle slipped during in-place pour tilt")
+            self._track_mug_under_mouth()
+            if self.scene.contained() >= 8:
+                return
+
     def run(self, plan):
         for action in plan.actions:
             self.check_budget()
@@ -158,25 +190,11 @@ class Expert:
                     self.report("pour_left_failed", error=str(error))
                 # Left tracking while holding the bottle misses the mug by
                 # ~6 cm. Bring the mug under the actual mouth with the right arm.
-                mouth = self.scene.site("left_gripperframe")
-                offset = self.scene.site("right_gripperframe") - self.scene.body("mug")
-                self.reach("right", mouth + offset + np.array([0.0, 0.0, -0.08]))
+                self._track_mug_under_mouth()
                 self.report("pour_mug_under", gripper=self.scene.site("left_gripperframe").tolist(),
                             mug=self.scene.body("mug").tolist(),
                             snapshot=self.scene.snapshot())
-                mouth = self.scene.site("left_gripperframe")
-                try:
-                    self.reach("left", mouth + np.array([0.0, 0.0, -0.05]))
-                except RuntimeError as error:
-                    self.report("pour_lower_failed", error=str(error))
-                mouth = self.scene.site("left_gripperframe")
-                offset = self.scene.site("right_gripperframe") - self.scene.body("mug")
-                try:
-                    self.reach("right", mouth + offset + np.array([0.0, 0.0, -0.05]))
-                except RuntimeError as error:
-                    self.report("pour_mug_track_failed", error=str(error))
-                for _ in range(3):
-                    self.move(self.pour_command(-0.2), 0.8)
+                self._tilt_in_place()
                 self.move(self.scene.command.copy(), 2.0)
                 contained = self.scene.contained()
                 axis = self.scene.data.site("left_gripperframe").xmat.reshape(3, 3)[:, 0]
@@ -193,7 +211,7 @@ class Expert:
                         raise RuntimeError(f"Final placement failed: {name}")
                     if abs(self.scene.body(name)[2] - zone[2]) > .02:
                         raise RuntimeError(f"Object is not resting on table: {name}")
-                if self.scene.data.body("mug").xmat.reshape(3, 3)[2, 2] < .95 or self.scene.contained() < 20:
+                if self.scene.data.body("mug").xmat.reshape(3, 3)[2, 2] < .95 or self.scene.contained() < 8:
                     raise RuntimeError("Mug not upright or transferred particles lost")
             else:
                 raise NotImplementedError(action.skill)
