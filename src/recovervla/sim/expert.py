@@ -117,10 +117,18 @@ class Expert:
                 self.grasp(arm, target)
             elif action.skill == Skill.PLACE:
                 offset = self.scene.site(arm + "_gripperframe") - self.scene.body(target)
-                self.reach(arm, self.zones[target] + offset + [0, 0, .06])
+                # The drawer handle top is ~11 cm; a 6 cm lift leaves the
+                # plate scraping it, so the carry never leaves the tray.
+                self.reach(arm, self.scene.site(arm + "_gripperframe") + [0, 0, .08])
+                self.reach(arm, self.zones[target] + offset + [0, 0, .08])
                 self.reach(arm, self.zones[target] + offset)
                 self.grip(arm, False)
-                self.reach(arm, self.scene.site(arm + "_gripperframe") + [0, 0, .06])
+                try:
+                    self.reach(arm, self.scene.site(arm + "_gripperframe") + [0, 0, .06])
+                except RuntimeError as error:
+                    self.report("place_retract_failed", error=str(error))
+                if np.linalg.norm(self.scene.body(target)[:2] - self.zones[target][:2]) > .05:
+                    raise RuntimeError(f"Place did not reach the table zone: {target}")
             elif action.skill == Skill.POUR:
                 self.reach("left", self.scene.body("mug") + [0, 0, .16])
                 command = self.scene.command.copy()
