@@ -108,9 +108,9 @@ class Expert:
         if self.scene.body(target)[2] < before + .02 or not self.scene.contact(arm, target):
             raise RuntimeError(f"Physical grasp failed: {arm} {target}")
 
-    def pour_command(self):
+    def pour_command(self, delta=1.5):
         command = self.scene.command.copy()
-        command[3] = np.clip(command[3] + 1.5, *self.scene.limits[3])
+        command[3] = np.clip(command[3] + delta, *self.scene.limits[3])
         return command
 
     def run(self, plan):
@@ -147,10 +147,17 @@ class Expert:
             elif action.skill == Skill.POUR:
                 self.report("pour_start", contained=self.scene.contained(),
                             snapshot=self.scene.snapshot())
-                self.reach("left", self.scene.body("mug") + [0, 0, .10])
-                command = self.pour_command()
-                self.move(command, 2)
-                self.move(command, 2)
+                # A single 1.5 rad wrist_flex interpolates into the table.
+                # Tip in small steps and re-acquire the mug after each pitch.
+                above = self.scene.body("mug") + np.array([0.0, 0.0, 0.10])
+                self.reach("left", above)
+                for _ in range(4):
+                    self.move(self.pour_command(0.4), 0.6)
+                    try:
+                        above = self.scene.body("mug") + np.array([0.0, 0.0, 0.10])
+                        self.reach("left", above)
+                    except RuntimeError as error:
+                        self.report("pour_reacquire_failed", error=str(error))
                 contained = self.scene.contained()
                 self.report("pour_end", contained=contained, snapshot=self.scene.snapshot())
                 if contained < 20:

@@ -52,10 +52,12 @@ class ExpertCommandTests(unittest.TestCase):
         scene = FakeScene()
         scene.command[3] = 0.2
         scene.command[4] = 0.1
-        tilted = Expert(scene, None).pour_command()
+        expert = Expert(scene, None)
+        tilted = expert.pour_command()
         self.assertGreater(tilted[3], 0.2)
         self.assertAlmostEqual(tilted[4], 0.1)
         self.assertLessEqual(tilted[3], scene.limits[3, 1])
+        self.assertAlmostEqual(expert.pour_command(0.4)[3], 0.6)
 
 
 if __name__ == "__main__":
