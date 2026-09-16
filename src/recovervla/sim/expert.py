@@ -154,13 +154,11 @@ class Expert:
                 def above():
                     return self.scene.body("mug") + np.array([0.0, 0.0, 0.12])
                 self.reach("left", above())
-                # The bottle hangs below the gripper along +tool-X, so a
-                # downward tool axis keeps it upright. Point tool X up to put
-                # the mouth under the beads.
-                for approach in ([.5, 0, .85], [.25, 0, .97], [0, 0, 1]):
+                # Tool +Z empties the bottle, but 2 cm position slop dumped
+                # the beads onto the table. Keep 4 mm XY over the mug.
+                for approach in ([.35, 0, .94], [.15, 0, .99], [0, 0, 1]):
                     try:
-                        self.reach("left", above(), approach=approach,
-                                   tolerance=.02, align=.7)
+                        self.reach("left", above(), approach=approach, align=.65)
                     except RuntimeError as error:
                         self.report("pour_approach_failed", approach=list(approach),
                                     error=str(error))
