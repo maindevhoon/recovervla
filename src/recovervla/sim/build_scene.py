@@ -96,7 +96,9 @@ def build(robot_dir: Path, seed: int):
     geom(drawer, "drawer_handle_lip", "box", (.04, .006, .02), (0, -.098, .04), **handle_kwargs)
     ET.SubElement(drawer, "site", name="drawer_grasp", pos="0 -.08 .045")
     # Keep the bottle outside the drawer/handle swept volume, including jitter.
-    positions = {"plate": (-.08, .08, .061), "mug": (.16, -.05, .032), "bottle": (-.19, -.13, .032)}
+    # Mug used to sit at (.16, -.05): right-arm IK missed the hover by 3.8 cm
+    # on seed 100. The probed reachable patch is nearer the place zone.
+    positions = {"plate": (-.08, .08, .061), "mug": (.12, -.08, .032), "bottle": (-.19, -.13, .032)}
     sampled = {}
     for name, position in positions.items():
         pos = np.array(position) + np.r_[rng.uniform(-.01, .01, 2), 0]
