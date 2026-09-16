@@ -38,14 +38,14 @@ class Expert:
             self.scene.step(action)
 
     def reach(self, arm, target, wrist_roll=None, approach=None, wrist_flex=None,
-              tolerance=.004, align=.94):
+              tolerance=.004, align=.94, seconds=1.5):
         self.check_budget()
         start = monotonic()
         self.report("reach_start", arm=arm, target=np.asarray(target).tolist())
         command = solve(self.scene, arm, target, wrist_roll=wrist_roll, approach=approach,
                         wrist_flex=wrist_flex, tolerance=tolerance, align=align)
         self.report("ik_ready", seconds=monotonic() - start)
-        self.move(command)
+        self.move(command, seconds)
         self.report("reach_end", seconds=monotonic() - start, snapshot=self.scene.snapshot())
 
     def grip(self, arm, closed):
@@ -154,14 +154,17 @@ class Expert:
                 def above():
                     return self.scene.body("mug") + np.array([0.0, 0.0, 0.12])
                 self.reach("left", above())
-                # Tool +Z empties the bottle, but 2 cm position slop dumped
-                # the beads onto the table. Keep 4 mm XY over the mug.
-                for approach in ([.35, 0, .94], [.15, 0, .99], [0, 0, 1]):
+                # Three large orientation jumps swing the bottle in an arc and
+                # dump beads on the table. Flip in small Cartesian-held steps.
+                for t in np.linspace(0.15, 1.0, 6):
+                    approach = np.array([(1.0 - t) * .6, 0.0, 0.55 + 0.45 * t])
+                    approach = approach / np.linalg.norm(approach)
                     try:
-                        self.reach("left", above(), approach=approach, align=.65)
+                        self.reach("left", above(), approach=approach, align=.6,
+                                   seconds=0.7)
                     except RuntimeError as error:
-                        self.report("pour_approach_failed", approach=list(approach),
-                                    error=str(error))
+                        self.report("pour_approach_failed", t=float(t),
+                                    approach=approach.tolist(), error=str(error))
                 self.move(self.scene.command.copy(), 2.0)
                 contained = self.scene.contained()
                 axis = self.scene.data.site("left_gripperframe").xmat.reshape(3, 3)[:, 0]
