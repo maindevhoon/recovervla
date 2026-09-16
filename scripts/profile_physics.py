@@ -24,6 +24,8 @@ for noslip, solver in ((3, mujoco.mjtSolver.mjSOL_NEWTON),
     for name in JOINTS:
         aid = model.actuator(name).id
         value = model.actuator_ctrlrange[aid, 1] if name.endswith("_gripper") else 0
+        if name.endswith("_shoulder_pan"):
+            value = .65
         data.qpos[model.jnt_qposadr[model.joint(name).id]] = value
         data.ctrl[aid] = value
     start = perf_counter()

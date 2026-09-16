@@ -15,6 +15,9 @@ class Scene:
         self.aids = [self.model.actuator(name).id for name in JOINTS]
         self.limits = self.model.actuator_ctrlrange[self.aids].copy()
         self.command = np.zeros(12)
+        # Splay the initial arms so their extended forearms do not intersect
+        # after orienting the bases inward.
+        self.command[[0, 6]] = .65
         # Start fully open using the SO-101 actuator limits, not a unit guess.
         self.command[[5, 11]] = self.limits[[5, 11], 1]
         self.data.qpos[self.qadr] = self.command
