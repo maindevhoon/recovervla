@@ -70,7 +70,7 @@ def build(robot_dir: Path, seed: int):
     ET.SubElement(world, "camera", name="scene", pos="0 -0.85 0.8", xyaxes="1 0 0 0 0.68 0.73")
     geom(world, "table", "box", (.45, .35, .025), rgba="0.5 0.35 0.2 1")
     decorate(root, world, assets)
-    drawer = ET.SubElement(world, "body", name="drawer", pos="-0.1 0.14 0.05")
+    drawer = ET.SubElement(world, "body", name="drawer", pos="-0.1 0.08 0.05")
     ET.SubElement(drawer, "joint", name="drawer_slide", type="slide", axis="0 -1 0", range="0 .09", damping="2")
     geom(drawer, "drawer_floor", "box", (.08, .07, .006), mass="0.08")
     geom(drawer, "drawer_back", "box", (.08, .006, .02), (0, .07, .02), mass="0.02")
