@@ -200,10 +200,21 @@ class Expert:
             # 90 deg is about as far as this grasp inverts (tool_x z stuck at 0).
             # Beads start leaving near bottle_up z 0.4; park then hold.
             if bottle_up[2] < .7:
-                self._track_mug_under_mouth(airborne_xy=airborne_xy, seconds=.3)
-                self.move(self.scene.command.copy(), 1.0)
+                # Stay on mouth+lead. Chasing airborne_xy dragged the mug
+                # off the +X stream (y -0.08 vs +0.03 on GHA 104).
+                self._track_mug_under_mouth(seconds=.3)
                 if self.scene.contained() >= 8:
                     return
+        # Extra kettle arc: 90 deg is the in-place limit (tool_x z stuck at 0)
+        # and only ~5 beads left. Nudge +X/down to steepen the mouth.
+        pos = self.scene.site("left_gripperframe")
+        try:
+            self.reach("left", pos + [0.03, 0.0, -0.025], approach=[1.0, 0.0, 0.0],
+                       align=.2, tolerance=.008, seconds=.5)
+        except RuntimeError as error:
+            self.report("pour_kettle_failed", error=str(error))
+        self._track_mug_under_mouth(seconds=.3)
+        self.move(self.scene.command.copy(), 1.5)
 
     def run(self, plan):
         for action in plan.actions:
