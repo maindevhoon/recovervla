@@ -41,6 +41,9 @@ def build(robot_dir: Path, seed: int):
     ET.SubElement(root, "option", timestep="0.002", integrator="implicitfast",
                   iterations="50", cone="elliptic", impratio="10", solver="CG",
                   noslip_iterations="0")
+    # MuJoCo 3.3.7 native cylinder/box contacts let the plate tunnel through
+    # the tray in our isolated drop test. The legacy collider preserves support.
+    ET.SubElement(root.find("option"), "flag", nativeccd="disable")
     assets = ET.SubElement(root, "asset")
     defaults = ET.SubElement(root, "default")
     ET.SubElement(defaults, "geom", friction="0.8 0.005 0.0001")
@@ -74,7 +77,7 @@ def build(robot_dir: Path, seed: int):
     ET.SubElement(world, "camera", name="scene", pos="0 -0.85 0.8", xyaxes="1 0 0 0 0.68 0.73")
     geom(world, "table", "box", (.45, .35, .025), rgba="0.5 0.35 0.2 1")
     decorate(root, world, assets)
-    drawer = ET.SubElement(world, "body", name="drawer", pos="-0.1 0.08 0.05")
+    drawer = ET.SubElement(world, "body", name="drawer", pos="0 0.08 0.05")
     ET.SubElement(drawer, "joint", name="drawer_slide", type="slide", axis="0 -1 0",
                   range="0 .09", damping="0.2")
     geom(drawer, "drawer_floor", "box", (.08, .07, .006), mass="0.08")
@@ -91,7 +94,7 @@ def build(robot_dir: Path, seed: int):
     geom(drawer, "drawer_handle", "box", (.04, .012, .016), (0, -.08, .045), **handle_kwargs)
     geom(drawer, "drawer_handle_lip", "box", (.04, .006, .02), (0, -.098, .04), **handle_kwargs)
     ET.SubElement(drawer, "site", name="drawer_grasp", pos="0 -.08 .045")
-    positions = {"plate": (-.1, .08, .061), "mug": (.12, .02, .032), "bottle": (-.12, -.08, .032)}
+    positions = {"plate": (0, .08, .061), "mug": (.16, -.05, .032), "bottle": (-.12, -.08, .032)}
     sampled = {}
     for name, position in positions.items():
         pos = np.array(position) + np.r_[rng.uniform(-.01, .01, 2), 0]
