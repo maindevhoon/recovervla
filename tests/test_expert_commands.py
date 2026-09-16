@@ -21,6 +21,9 @@ class FakeScene:
     def step(self, action):
         self.command = np.asarray(action, dtype=float).copy()
 
+    def snapshot(self):
+        return {}
+
 
 @unittest.skipUnless(Expert is not None, "numpy/mujoco extra not installed")
 class ExpertCommandTests(unittest.TestCase):
