@@ -39,7 +39,7 @@ def build(robot_dir: Path, seed: int):
     root = ET.Element("mujoco", model="recovervla")
     ET.SubElement(root, "compiler", angle="radian", autolimits="true")
     ET.SubElement(root, "option", timestep="0.002", integrator="implicitfast",
-                  iterations="50", cone="elliptic", impratio="10", solver="CG",
+                  iterations="50", cone="elliptic", impratio="10", solver="Newton",
                   noslip_iterations="0")
     # MuJoCo 3.3.7 native cylinder/box contacts let the plate tunnel through
     # the tray in our isolated drop test. The legacy collider preserves support.
@@ -77,7 +77,7 @@ def build(robot_dir: Path, seed: int):
     ET.SubElement(world, "camera", name="scene", pos="0 -0.85 0.8", xyaxes="1 0 0 0 0.68 0.73")
     geom(world, "table", "box", (.45, .35, .025), rgba="0.5 0.35 0.2 1")
     decorate(root, world, assets)
-    drawer = ET.SubElement(world, "body", name="drawer", pos="0 0.08 0.05")
+    drawer = ET.SubElement(world, "body", name="drawer", pos="-0.08 0.08 0.05")
     ET.SubElement(drawer, "joint", name="drawer_slide", type="slide", axis="0 -1 0",
                   range="0 .09", damping="0.2")
     geom(drawer, "drawer_floor", "box", (.08, .07, .006), mass="0.08")
@@ -94,7 +94,7 @@ def build(robot_dir: Path, seed: int):
     geom(drawer, "drawer_handle", "box", (.04, .012, .016), (0, -.08, .045), **handle_kwargs)
     geom(drawer, "drawer_handle_lip", "box", (.04, .006, .02), (0, -.098, .04), **handle_kwargs)
     ET.SubElement(drawer, "site", name="drawer_grasp", pos="0 -.08 .045")
-    positions = {"plate": (0, .08, .061), "mug": (.16, -.05, .032), "bottle": (-.12, -.08, .032)}
+    positions = {"plate": (-.08, .08, .061), "mug": (.16, -.05, .032), "bottle": (-.12, -.08, .032)}
     sampled = {}
     for name, position in positions.items():
         pos = np.array(position) + np.r_[rng.uniform(-.01, .01, 2), 0]
@@ -117,7 +117,10 @@ def build(robot_dir: Path, seed: int):
         pos = bottle + [.012 * math.cos(a), .012 * math.sin(a), .009 + layer * .0085]
         body = ET.SubElement(world, "body", name=f"water_{i:02}", pos=vector(pos))
         ET.SubElement(body, "freejoint")
-        geom(body, f"water_geom_{i}", "sphere", (.004,), mass="0.0003", rgba="0.1 0.3 1 1")
+        # Frictionless beads are a coarse liquid surrogate, not sticky solids.
+        # Normal-only contacts also avoid hundreds of unnecessary friction DOFs.
+        geom(body, f"water_geom_{i}", "sphere", (.004,), mass="0.0003",
+             rgba="0.1 0.3 1 1", condim="1", priority="2", friction="0 0 0")
     for name, x in (("fork", -.05), ("knife", 0), ("napkin", .05)):
         geom(world, name, "box", (.008, .025, .002), (x, -.20, .028), rgba="0.8 0.8 0.8 1")
     return ET.tostring(root, encoding="unicode"), {"seed": seed, "positions": sampled}

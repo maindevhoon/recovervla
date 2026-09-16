@@ -62,7 +62,7 @@ class Expert:
             self.report("drawer_attempt", wrist_roll=roll)
             try:
                 self.grip("left", False)
-                self.reach("left", behind + np.array([0.0, 0.0, 0.06]), approach=[0, 0, -1])
+                self.reach("left", behind + np.array([0.0, 0.0, 0.04]), approach=[0, 0, -1])
                 self.reach("left", behind, approach=[0, 0, -1])
                 self.grip("left", True)
                 for frac in np.linspace(0.2, 1.0, 6):
