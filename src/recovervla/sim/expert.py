@@ -133,8 +133,8 @@ class Expert:
         # A direct wrist command swings the whole bottle away from the mug.
         for step in range(10):
             mouth = self.scene.site("left_gripperframe")
-            flex = min(float(self.scene.command[3]) + .12, float(self.scene.limits[3, 1]))
-            if flex <= self.scene.command[3] + 1e-4:
+            flex = max(float(self.scene.command[3]) - .12, float(self.scene.limits[3, 0]))
+            if flex >= self.scene.command[3] - 1e-4:
                 break
             self.reach("left", mouth, wrist_flex=flex, tolerance=.004,
                        seconds=.4)
