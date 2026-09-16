@@ -39,7 +39,16 @@ from IPython.display import Image, display
 display(Image(filename="artifacts/preview/hero.png", width=720))
 ```
 
-## Cell 3 — demonstration gate
+## Cell 3 — fast physics-only expert gate
+
+```python
+subprocess.run([sys.executable, "scripts/validate_expert.py", "--attempts", "3"], check=True)
+```
+
+This skips camera rendering and video encoding, making failed-waypoint tuning much
+faster. Continue only after at least one complete physical sequence succeeds.
+
+## Cell 4 — one encoded demonstration gate
 
 ```python
 subprocess.run([
@@ -53,7 +62,7 @@ print(Path("/kaggle/working/datasets/smoke/report.json").read_text())
 Do not continue if this cell produces no successful episode. Inspect the report,
 tune the expert, and collect into a new output directory.
 
-## Cell 4 — small time-boxed dataset
+## Cell 5 — small time-boxed dataset
 
 ```python
 subprocess.run([
@@ -63,7 +72,7 @@ subprocess.run([
 ], check=True)
 ```
 
-## Cell 5 — short ACT baseline
+## Cell 6 — short ACT baseline
 
 ```python
 subprocess.run([

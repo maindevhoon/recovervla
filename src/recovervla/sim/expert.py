@@ -16,9 +16,10 @@ class Expert:
         steps = max(round(seconds * FPS), int(np.ceil(np.max(abs(command - start)) / .025)))
         for fraction in np.linspace(1 / steps, 1, steps):
             action = start + fraction * (command - start)
-            frame = self.scene.observe()
-            frame["action"] = action.astype(np.float32)
-            self.record(frame)
+            if self.record is not None:
+                frame = self.scene.observe()
+                frame["action"] = action.astype(np.float32)
+                self.record(frame)
             self.scene.step(action)
 
     def reach(self, arm, target):
