@@ -1,0 +1,43 @@
+name: render-rollout
+
+on:
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: Scene seed to record
+        default: "104"
+
+jobs:
+  video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      MUJOCO_GL: osmesa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install OSMesa, EGL, and ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libosmesa6 libegl1 ffmpeg
+      - name: Install simulation extra
+        run: pip install -e ".[sim]"
+      - name: Fetch pinned robot assets
+        run: python scripts/fetch_assets.py
+      - name: Record seed rollout
+        run: |
+          mkdir -p artifacts/preview
+          python scripts/render_rollout.py \
+            --seed ${{ github.event.inputs.seed || '104' }} \
+            --output artifacts/preview/seed-${{ github.event.inputs.seed || '104' }}.mp4 \
+            --timeout 180
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seed-${{ github.event.inputs.seed || '104' }}-rollout
+          path: |
+            artifacts/preview/seed-*.mp4
+            artifacts/preview/seed-*.json
+          if-no-files-found: error
