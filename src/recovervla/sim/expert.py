@@ -151,24 +151,17 @@ class Expert:
                 # Position-only re-acquire unwinds wrist_flex. Lock flex in IK
                 # so the neck stays over the mug while the bottle inverts.
                 def above():
-                    return self.scene.body("mug") + np.array([0.0, 0.0, 0.10])
+                    return self.scene.body("mug") + np.array([0.0, 0.0, 0.12])
                 self.reach("left", above())
-                # Grasp leaves wrist_flex near the +limit, so +1.5 rad is
-                # unreachable. Recenter, then invert through the free range.
-                try:
-                    self.reach("left", above(), wrist_flex=0.0)
-                except RuntimeError as error:
-                    self.report("pour_center_flex_failed", error=str(error))
-                base_flex = float(self.scene.command[3])
-                lo, hi = self.scene.limits[3]
-                sign = 1.0 if (hi - base_flex) >= (base_flex - lo) else -1.0
-                travel = max(hi - base_flex, base_flex - lo)
-                for frac in (0.35, 0.7, 1.0):
-                    flex = float(np.clip(base_flex + sign * frac * travel, lo, hi))
+                # Wrist_flex only has ~1.6 rad of travel, which does not invert
+                # a top-held bottle. Point the tool axis down over the mug so
+                # the mouth faces gravity while the gripper stays put.
+                for approach in ([.4, 0, -.9], [.7, 0, -.7], [.9, 0, -.4], [0, 0, -1]):
                     try:
-                        self.reach("left", above(), wrist_flex=flex)
+                        self.reach("left", above(), approach=approach)
                     except RuntimeError as error:
-                        self.report("pour_tilt_failed", flex=flex, error=str(error))
+                        self.report("pour_approach_failed", approach=list(approach),
+                                    error=str(error))
                 self.move(self.scene.command.copy(), 2.0)
                 contained = self.scene.contained()
                 self.report("pour_end", contained=contained, snapshot=self.scene.snapshot())
