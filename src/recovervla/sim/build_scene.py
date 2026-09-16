@@ -105,12 +105,11 @@ def build(robot_dir: Path, seed: int):
             body = ET.SubElement(world, "body", name=name, pos=vector(pos))
             ET.SubElement(body, "freejoint", name=name + "_free")
             geom(body, "plate_geom", "cylinder", (.04, .004), mass="0.035", rgba="0.9 0.9 0.9 1")
-            # A thin flat disk lies almost flush on the tray: the SO-101 jaws
-            # contacted only one face and swept it sideways. Give this plate
-            # a small raised rim section that can be pinched from above.
-            geom(body, "plate_grip_rim", "box", (.005, .018, .012),
-                 (.038, 0, .012), mass="0.004", rgba="0.94 0.94 0.94 1")
-            ET.SubElement(body, "site", name="plate_grasp", pos=".038 0 .015")
+            # Side rims jammed on the drawer wall or handle. A short central
+            # tab lets both jaws close from above, clear of the cavity sides.
+            geom(body, "plate_grip_tab", "box", (.007, .007, .016),
+                 (0, 0, .020), mass="0.004", rgba="0.94 0.94 0.94 1")
+            ET.SubElement(body, "site", name="plate_grasp", pos="0 0 .020")
         else:
             body = vessel(world, name, pos, .028 if name == "mug" else .023, .055 if name == "mug" else .10)
         mass_scale, friction = rng.uniform(.8, 1.2), rng.uniform(.6, 1.1)
