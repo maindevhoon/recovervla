@@ -17,9 +17,10 @@ For the enhanced dining-room scene, see [Colab rendering instructions](docs/DINI
 For the time-boxed Kaggle path, see [Kaggle fast path](docs/KAGGLE_QUICKSTART.md).
 
 MuJoCo rendering and contact rollouts have been executed on Kaggle. The drawer
-has opened through physical contact, and object support passed ten randomized
-seeds. Full plate grasp, placement, and pouring remain unvalidated; ACT training
-has not started. The default evaluation below remains a dry run.
+opened through physical contact in 10/10 randomized seeds (100–109), and object
+support passed ten randomized seeds. Full plate grasp, placement, and pouring
+remain unvalidated; ACT training has not started. The default evaluation below
+remains a dry run.
 
 ```bash
 PYTHONPATH=src python3 -m recovervla.evaluation --seeds 10

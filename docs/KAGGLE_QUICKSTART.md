@@ -61,6 +61,11 @@ The collector has a separate `--episode-timeout` (default 600 seconds) because
 rendering and encoding are included. Never capture all subprocess output while
 debugging: use `-u` and streamed stdout so failures remain visible.
 
+For independent drawer-seed logs and a summary report, use
+`python scripts/validate_batch.py --scope drawer --attempts 10 --workers 2 --output /kaggle/working/drawer-check`.
+The 100–109 drawer batch passed on Kaggle. This does not validate plate grasp or
+the rest of the full task.
+
 Run physics and rendering regressions remotely:
 
 ```python
