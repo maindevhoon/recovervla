@@ -14,7 +14,9 @@ Run this cell in the existing Colab notebook (CPU is sufficient for a still):
 !apt-get update -qq
 !apt-get install -y -qq libosmesa6
 !pip install -q mujoco==3.3.7 numpy pillow
-!python scripts/fetch_assets.py
+from pathlib import Path
+if not Path('artifacts/so101/manifest.json').exists():
+    !python scripts/fetch_assets.py
 !MUJOCO_GL=osmesa python scripts/render_scene.py --seed 0
 from IPython.display import display, Image
 display(Image(filename='artifacts/preview/hero.png'))
@@ -23,5 +25,6 @@ display(Image(filename='artifacts/preview/overhead.png'))
 
 The script also saves the scene and both wrist-camera views. These are static
 initial-state renders, not evidence of collision-free motion or learned-policy
-success. The new scene still needs remote compilation/render verification and
-physical rollout checks before collecting training data. No local execution.
+success. Remote compilation and all five camera renders passed in Colab on
+2026-09-16 with seed 0 (MuJoCo 3.3.7, CPU/OSMesa). Physical rollout checks are
+still required before collecting training data. No local execution.
