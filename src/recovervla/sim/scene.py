@@ -79,13 +79,16 @@ class Scene:
                 return True
         return False
 
-    def contained(self):
-        origin = self.body("mug")
-        rotation = self.data.body("mug").xmat.reshape(3, 3)
+    def in_vessel(self, name, radius, zmax):
+        origin = self.body(name)
+        rotation = self.data.body(name).xmat.reshape(3, 3)
         particles = np.array([self.body(f"water_{i:02}") for i in range(60)])
         local = (particles - origin) @ rotation
-        return int(((np.linalg.norm(local[:, :2], axis=1) < .024) &
-                    (local[:, 2] > .007) & (local[:, 2] < .051)).sum())
+        return int(((np.linalg.norm(local[:, :2], axis=1) < radius) &
+                    (local[:, 2] > .007) & (local[:, 2] < zmax)).sum())
+
+    def contained(self):
+        return self.in_vessel("mug", .024, .051)
 
     def snapshot(self):
         gripper = self.site("left_gripperframe")
@@ -104,6 +107,7 @@ class Scene:
             "left_gripper_cmd": float(self.command[5]),
             "objects": {name: self.body(name).tolist() for name in ("plate", "mug", "bottle")},
             "contained": self.contained(),
+            "bottle_contained": self.in_vessel("bottle", .018, .10),
             "ncon": int(self.data.ncon),
             "contacts": contacts,
             "deepest_contact": min(

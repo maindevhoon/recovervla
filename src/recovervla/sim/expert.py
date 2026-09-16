@@ -99,12 +99,19 @@ class Expert:
                     body=self.scene.body(target).tolist(), contact=self.scene.contact(arm, target),
                     snapshot=self.scene.snapshot())
         before = self.scene.body(target)[2]
-        self.reach(arm, point + [0, 0, .06])
+        # A 6 cm unconstrained bottle lift swings ~40 deg and dumps the beads.
+        clearance = .03 if target == "bottle" else .06
+        self.reach(arm, point + [0, 0, clearance])
         self.report("grasp_lifted", arm=arm, target=target,
                     body=self.scene.body(target).tolist(), contact=self.scene.contact(arm, target),
                     snapshot=self.scene.snapshot())
         if self.scene.body(target)[2] < before + .02 or not self.scene.contact(arm, target):
             raise RuntimeError(f"Physical grasp failed: {arm} {target}")
+
+    def pour_command(self):
+        command = self.scene.command.copy()
+        command[3] = np.clip(command[3] + 1.5, *self.scene.limits[3])
+        return command
 
     def run(self, plan):
         for action in plan.actions:
@@ -140,9 +147,8 @@ class Expert:
             elif action.skill == Skill.POUR:
                 self.report("pour_start", contained=self.scene.contained(),
                             snapshot=self.scene.snapshot())
-                self.reach("left", self.scene.body("mug") + [0, 0, .16])
-                command = self.scene.command.copy()
-                command[4] = np.clip(command[4] + 1.5, *self.scene.limits[4])
+                self.reach("left", self.scene.body("mug") + [0, 0, .10])
+                command = self.pour_command()
                 self.move(command, 2)
                 self.move(command, 2)
                 contained = self.scene.contained()

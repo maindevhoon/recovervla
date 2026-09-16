@@ -46,6 +46,17 @@ class ExpertCommandTests(unittest.TestCase):
         expert.grip("right", False)
         self.assertAlmostEqual(scene.command[11], scene.limits[11, 1])
 
+    def test_pour_tilts_wrist_flex_not_roll(self):
+        # A top-down neck grasp has tool X pointing down. Wrist roll spins
+        # the bottle; wrist flex tips it into the mug.
+        scene = FakeScene()
+        scene.command[3] = 0.2
+        scene.command[4] = 0.1
+        tilted = Expert(scene, None).pour_command()
+        self.assertGreater(tilted[3], 0.2)
+        self.assertAlmostEqual(tilted[4], 0.1)
+        self.assertLessEqual(tilted[3], scene.limits[3, 1])
+
 
 if __name__ == "__main__":
     unittest.main()
