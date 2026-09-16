@@ -95,7 +95,8 @@ def build(robot_dir: Path, seed: int):
     geom(drawer, "drawer_handle", "box", (.04, .012, .016), (0, -.08, .045), **handle_kwargs)
     geom(drawer, "drawer_handle_lip", "box", (.04, .006, .02), (0, -.098, .04), **handle_kwargs)
     ET.SubElement(drawer, "site", name="drawer_grasp", pos="0 -.08 .045")
-    positions = {"plate": (-.08, .08, .061), "mug": (.16, -.05, .032), "bottle": (-.12, -.08, .032)}
+    # Keep the bottle outside the drawer/handle swept volume, including jitter.
+    positions = {"plate": (-.08, .08, .061), "mug": (.16, -.05, .032), "bottle": (-.19, -.13, .032)}
     sampled = {}
     for name, position in positions.items():
         pos = np.array(position) + np.r_[rng.uniform(-.01, .01, 2), 0]

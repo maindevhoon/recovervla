@@ -69,7 +69,7 @@ class Expert:
                 self.grip("left", True)
                 for frac in np.linspace(0.2, 1.0, 6):
                     self.reach("left", behind + frac * (front - behind), approach=[0, 0, -1])
-                    if float(self.scene.data.joint("drawer_slide").qpos[0]) >= 0.05:
+                    if float(self.scene.data.joint("drawer_slide").qpos[0]) >= 0.075:
                         self.grip("left", False)
                         # Clear the tall handle before reaching back into the
                         # tray; the former direct transition pushed it shut.
