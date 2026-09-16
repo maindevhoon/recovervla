@@ -45,7 +45,9 @@ def build(robot_dir: Path, seed: int):
     ET.SubElement(defaults, "geom", friction="0.8 0.005 0.0001")
     world = ET.SubElement(root, "worldbody")
     actuators = ET.SubElement(root, "actuator")
-    for side, x, yaw in (("left", -.26, -math.pi / 2), ("right", .26, math.pi / 2)):
+    # The upstream zero pose extends along local +X. Face both arms toward
+    # the shared workspace, rather than toward opposite table edges (+/-Y).
+    for side, x, yaw in (("left", -.26, 0), ("right", .26, math.pi)):
         arm = ET.parse(robot_dir / "so101.xml").getroot()
         for mesh in arm.findall("./asset/mesh"):
             mesh.set("name", mesh.get("name", Path(mesh.attrib["file"]).stem))
@@ -88,7 +90,7 @@ def build(robot_dir: Path, seed: int):
     geom(drawer, "drawer_handle", "box", (.04, .012, .016), (0, -.08, .045), **handle_kwargs)
     geom(drawer, "drawer_handle_lip", "box", (.04, .006, .02), (0, -.098, .04), **handle_kwargs)
     ET.SubElement(drawer, "site", name="drawer_grasp", pos="0 -.08 .045")
-    positions = {"plate": (-.1, .14, .067), "mug": (.12, .02, .032), "bottle": (-.12, -.08, .032)}
+    positions = {"plate": (-.1, .08, .061), "mug": (.12, .02, .032), "bottle": (-.12, -.08, .032)}
     sampled = {}
     for name, position in positions.items():
         pos = np.array(position) + np.r_[rng.uniform(-.01, .01, 2), 0]
