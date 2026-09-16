@@ -20,6 +20,8 @@ parser.add_argument("--robot-dir", type=Path, default=Path("artifacts/so101"))
 parser.add_argument("--start-seed", type=int, default=100)
 parser.add_argument("--attempts", type=int, default=3)
 parser.add_argument("--timeout", type=float, default=120)
+parser.add_argument("--scope", choices=("full", "drawer"), default="full")
+parser.add_argument("--report", type=Path)
 args = parser.parse_args()
 rows = []
 for seed in range(args.start_seed, args.start_seed + args.attempts):
@@ -31,9 +33,13 @@ for seed in range(args.start_seed, args.start_seed + args.attempts):
     scene = Scene(args.robot_dir, seed, render=False)
     progress("scene_ready", snapshot=scene.snapshot())
     expert = Expert(scene, None, progress=progress, timeout=args.timeout)
-    row = {"seed": seed, "success": False}
+    row = {"seed": seed, "scope": args.scope, "success": False}
     try:
-        expert.run(TableSettingPlanner().plan(REFERENCE_INSTRUCTION))
+        if args.scope == "drawer":
+            expert._open_drawer()
+            expert.history.append("open_drawer:top_drawer")
+        else:
+            expert.run(TableSettingPlanner().plan(REFERENCE_INSTRUCTION))
     except (RuntimeError, TimeoutError) as error:
         row["error"] = str(error)
     else:
@@ -44,6 +50,9 @@ for seed in range(args.start_seed, args.start_seed + args.attempts):
         scene.close()
         rows.append(row)
         progress("attempt_finished", **row)
+        if args.report:
+            args.report.parent.mkdir(parents=True, exist_ok=True)
+            args.report.write_text(json.dumps(rows, indent=2))
 print(json.dumps(rows, indent=2))
-if not any(row["success"] for row in rows):
-    raise SystemExit("No successful physics-only expert attempt")
+if not all(row["success"] for row in rows):
+    raise SystemExit(f"{sum(row['success'] for row in rows)}/{len(rows)} {args.scope} attempts passed")

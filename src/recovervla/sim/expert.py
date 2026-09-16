@@ -25,7 +25,9 @@ class Expert:
 
     def move(self, command, seconds=1.5):
         start = self.scene.command.copy()
-        steps = max(round(seconds * FPS), int(np.ceil(np.max(abs(command - start)) / .025)))
+        max_delta = np.full(12, .025)
+        max_delta[[5, 11]] = .15
+        steps = max(round(seconds * FPS), int(np.ceil(np.max(abs(command - start) / max_delta))))
         for fraction in np.linspace(1 / steps, 1, steps):
             self.check_budget()
             action = start + fraction * (command - start)
@@ -69,6 +71,11 @@ class Expert:
                     self.reach("left", behind + frac * (front - behind), approach=[0, 0, -1])
                     if float(self.scene.data.joint("drawer_slide").qpos[0]) >= 0.05:
                         self.grip("left", False)
+                        # Clear the tall handle before reaching back into the
+                        # tray; the former direct transition pushed it shut.
+                        self.reach("left", self.scene.site("left_gripperframe") + [0, 0, .06])
+                        if float(self.scene.data.joint("drawer_slide").qpos[0]) < .05:
+                            raise RuntimeError("Drawer closed again during release")
                         return
             except RuntimeError as error:
                 self.report("drawer_attempt_failed", error=str(error))
