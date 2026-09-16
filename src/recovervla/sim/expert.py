@@ -8,7 +8,7 @@ from ..types import Skill
 
 # Modest +X/-Y lead for a controlled tilt. The 4 cm Kaggle offset was measured
 # on a bottle that had already dumped during a long joint-space carry.
-STREAM_LEAD = np.array([.02, -.01, 0.])
+STREAM_LEAD = np.array([.03, 0.0, 0.])
 
 
 def catch_gripper_target(mouth, gripper_minus_mug, vertical_gap, stream_lead=STREAM_LEAD,
@@ -197,8 +197,11 @@ class Expert:
                 raise RuntimeError("Bottle slipped during in-place pour tilt")
             if self.scene.contained() >= 8:
                 return
-            if bottle_up[2] < .35:
+            # 90 deg is about as far as this grasp inverts (tool_x z stuck at 0).
+            # Beads start leaving near bottle_up z 0.4; park then hold.
+            if bottle_up[2] < .7:
                 self._track_mug_under_mouth(airborne_xy=airborne_xy, seconds=.3)
+                self.move(self.scene.command.copy(), 1.0)
                 if self.scene.contained() >= 8:
                     return
 
