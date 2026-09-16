@@ -13,6 +13,7 @@ dry-run model, not a claim of completed robot simulation.
 
 Run commands on the remote Linux host. The Mac is used only for editing files.
 See [remote setup, collection, and L4 training](docs/REMOTE.md).
+For the enhanced dining-room scene, see [Colab rendering instructions](docs/DINING_PREVIEW.md).
 
 Simulation code and ACT training launchers are present but have not been executed.
 Contact grasp and pouring behavior require remote validation before collecting
