@@ -3,6 +3,7 @@ from copy import deepcopy
 import math
 from pathlib import Path
 import xml.etree.ElementTree as ET
+from .dining import decorate
 
 REFERENCE_ATTRS = {"name", "class", "childclass", "joint", "joint1", "joint2", "body",
                   "body1", "body2", "site", "site1", "site2", "mesh", "material",
@@ -68,6 +69,7 @@ def build(robot_dir: Path, seed: int):
     ET.SubElement(world, "light", pos="0 0 1.5", diffuse=vector([rng.uniform(.6, 1)] * 3))
     ET.SubElement(world, "camera", name="scene", pos="0 -0.85 0.8", xyaxes="1 0 0 0 0.68 0.73")
     geom(world, "table", "box", (.45, .35, .025), rgba="0.5 0.35 0.2 1")
+    decorate(root, world, assets)
     drawer = ET.SubElement(world, "body", name="drawer", pos="-0.1 0.14 0.05")
     ET.SubElement(drawer, "joint", name="drawer_slide", type="slide", axis="0 -1 0", range="0 .09", damping="2")
     geom(drawer, "drawer_floor", "box", (.08, .07, .006), mass="0.08")
