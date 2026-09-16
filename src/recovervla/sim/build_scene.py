@@ -42,6 +42,13 @@ def add_neck_tab(body, name, z):
     geom(body, name + "_grip_tab", "box", (.006, .006, .012),
          (0, 0, z), mass="0.003", rgba="0.94 0.94 0.94 1")
     ET.SubElement(body, "site", name=name + "_grasp", pos=f"0 0 {z}")
+    # Frictionless beads fell out during a 40-degree lift tilt. An inward
+    # lip keeps them until the pour inverts the bottle.
+    for i in range(20):
+        angle = 2 * math.pi * i / 20
+        geom(body, f"{name}_lip_{i}", "box", (.003, .005, .006),
+             (.014 * math.cos(angle), .014 * math.sin(angle), z - .008),
+             euler=f"0 0 {angle}", mass="0.0008", rgba="0.3 0.6 0.9 1")
     return body
 
 
