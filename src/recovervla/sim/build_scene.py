@@ -76,8 +76,11 @@ def build(robot_dir: Path, seed: int):
     geom(drawer, "drawer_back", "box", (.08, .006, .02), (0, .07, .02), mass="0.02")
     for side in (-1, 1):
         geom(drawer, f"drawer_side_{side}", "box", (.006, .07, .02), (side * .08, 0, .02), mass="0.02")
-    geom(drawer, "drawer_handle", "capsule", (.006, .025), (0, -.08, .015), euler="0 1.5708 0", mass="0.01")
-    ET.SubElement(drawer, "site", name="drawer_grasp", pos="0 -.08 .015")
+    # Lift the handle above the drawer lip and into the SO-101's reachable
+    # near-table workspace. The former 6.5 cm world height was 2.65 cm beyond
+    # the closest deterministic IK solution on remote MuJoCo validation.
+    geom(drawer, "drawer_handle", "capsule", (.006, .025), (0, -.08, .045), euler="0 1.5708 0", mass="0.01")
+    ET.SubElement(drawer, "site", name="drawer_grasp", pos="0 -.08 .045")
     positions = {"plate": (-.1, .14, .067), "mug": (.12, .02, .032), "bottle": (-.12, -.08, .032)}
     sampled = {}
     for name, position in positions.items():
