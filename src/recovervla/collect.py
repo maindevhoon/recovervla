@@ -33,7 +33,7 @@ def main():
     from .sim.scene import Scene
     from .sim.expert import Expert
     ds = LeRobotDataset.create(args.repo_id, FPS, features(), root=output,
-                               robot_type="so101_bimanual", vcodec="libx264")
+                               robot_type="so101_bimanual", vcodec="h264")
     report = {"executor": "mujoco-scripted-expert", "angles": "radian", "attempts": [],
               "disclaimer": "Scripted demonstration collection; remote physics validation required",
               "evaluation_seeds": list(range(10000, 10010))}
