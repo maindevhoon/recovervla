@@ -6,6 +6,24 @@ from .schema import FPS
 from ..types import Skill
 
 
+# First-burst lead from Kaggle seeds 104/105: airborne mean minus mouth XY
+# at the instant beads leave. Post-dump mug chasing is slower than the fall.
+STREAM_LEAD = np.array([.044, -.021, 0.])
+
+
+def catch_gripper_target(mouth, gripper_minus_mug, vertical_gap, stream_lead=STREAM_LEAD,
+                         airborne_xy=None):
+    mouth = np.asarray(mouth, float)
+    offset = np.asarray(gripper_minus_mug, float)
+    lead = np.asarray(stream_lead, float)
+    if airborne_xy is None:
+        mug_xy = mouth[:2] + lead[:2]
+    else:
+        mug_xy = np.asarray(airborne_xy, float)[:2]
+    mug = np.array([mug_xy[0], mug_xy[1], mouth[2] - vertical_gap])
+    return mug + offset
+
+
 class Expert:
     def __init__(self, scene, record, progress=None, timeout=120):
         self.scene, self.record = scene, record
@@ -115,58 +133,71 @@ class Expert:
         command[3] = np.clip(command[3] + delta, *self.scene.limits[3])
         return command
 
-    def _track_mug_under_mouth(self, vertical_gap=.08):
-        # The gripper frame is not the bottle opening after the tab pivots
-        # within the jaws. Moreover, on remote physical seeds 104 and 105,
-        # airborne beads consistently travelled to +X/-Y of the opening.
-        # Place the mug under that observed stream, not directly under the
-        # mouth. This is an expert demonstration target, not a hidden teleport.
+    def _airborne_stream(self):
+        mug = self.scene.body("mug")
+        mouth = self.scene.site("bottle_grasp")
+        beads = np.array([self.scene.body(f"water_{i:02}") for i in range(60)])
+        local = (beads - self.scene.body("bottle")) @ self.scene.data.body(
+            "bottle").xmat.reshape(3, 3)
+        in_bottle = ((np.linalg.norm(local[:, :2], axis=1) < .018) &
+                     (local[:, 2] > .007) & (local[:, 2] < .10))
+        just_left = beads[(~in_bottle) & (beads[:, 2] > mouth[2] - .03) &
+                          (beads[:, 2] < mouth[2] + .04)]
+        airborne = just_left if len(just_left) else beads[
+            (~in_bottle) & (beads[:, 2] > mug[2] + .04) & (beads[:, 2] < mouth[2] + .04)]
+        xy = airborne[:, :2].mean(axis=0) if len(airborne) else None
+        return xy, len(airborne)
+
+    def _track_mug_under_mouth(self, vertical_gap=.08, airborne_xy=None, seconds=.5):
+        # Park before the first tilt: beads fall in ~0.13 s, so chasing after
+        # the dump cannot catch them. Live airborne XY is only a one-shot
+        # correction if the pre-park missed and beads are still high.
         mouth = self.scene.site("bottle_grasp")
         offset = self.scene.site("right_gripperframe") - self.scene.body("mug")
-        stream_offset = np.array([.035, -.05, 0.])
-        self.reach("right", mouth + offset + stream_offset + np.array([0., 0., -vertical_gap]),
-                   seconds=.6)
+        target = catch_gripper_target(mouth, offset, vertical_gap, STREAM_LEAD, airborne_xy)
+        self.reach("right", target, seconds=seconds)
         self.report("pour_mug_track", mouth=self.scene.site("bottle_grasp").tolist(),
                     gripper=self.scene.site("left_gripperframe").tolist(),
                     mug=self.scene.body("mug").tolist(),
-                    stream_offset=stream_offset.tolist(),
+                    stream_offset=STREAM_LEAD.tolist(),
+                    airborne_xy=None if airborne_xy is None else np.asarray(airborne_xy).tolist(),
                     contained=self.scene.contained(),
                     bottle_contained=self.scene.in_vessel("bottle", .018, .10))
 
     def _tilt_in_place(self):
         # Lock the flex joint in IK while holding the *live* tool position.
-        # A direct wrist command swings the whole bottle away from the mug.
-        for step in range(10):
+        # Do not drag the mug during the dump: that moved the stream off the
+        # cup on seeds 104/105. One catch is allowed after beads appear.
+        caught = False
+        for step in range(12):
             mouth = self.scene.site("left_gripperframe")
-            flex = max(float(self.scene.command[3]) - .12, float(self.scene.limits[3, 0]))
+            flex = max(float(self.scene.command[3]) - .06, float(self.scene.limits[3, 0]))
             if flex >= self.scene.command[3] - 1e-4:
                 break
             self.reach("left", mouth, wrist_flex=flex, tolerance=.004,
-                       seconds=.4)
+                       seconds=.35)
             axis = self.scene.data.site("left_gripperframe").xmat.reshape(3, 3)[:, 0]
             bottle_up = self.scene.data.body("bottle").xmat.reshape(3, 3)[:, 2]
-            mug = self.scene.body("mug")
-            beads = np.array([self.scene.body(f"water_{i:02}") for i in range(60)])
-            local = (beads - self.scene.body("bottle")) @ self.scene.data.body(
-                "bottle").xmat.reshape(3, 3)
-            in_bottle = ((np.linalg.norm(local[:, :2], axis=1) < .018) &
-                         (local[:, 2] > .007) & (local[:, 2] < .10))
-            airborne = beads[(~in_bottle) & (beads[:, 2] > mug[2] + .04) &
-                             (beads[:, 2] < self.scene.site("bottle_grasp")[2] + .04)]
+            airborne_xy, airborne_count = self._airborne_stream()
             self.report("pour_tilt_step", step=step, flex=flex, tool_x=axis.tolist(),
                         bottle_up=bottle_up.tolist(),
                         mouth=self.scene.site("bottle_grasp").tolist(),
                         mug=self.scene.body("mug").tolist(),
-                        airborne_count=len(airborne),
-                        airborne_xy=airborne[:, :2].mean(axis=0).tolist() if len(airborne) else None,
+                        airborne_count=airborne_count,
+                        airborne_xy=None if airborne_xy is None else airborne_xy.tolist(),
                         contained=self.scene.contained(),
                         bottle_contained=self.scene.in_vessel("bottle", .018, .10),
                         bottle_contact=self.scene.contact("left", "bottle"))
             if not self.scene.contact("left", "bottle"):
                 raise RuntimeError("Bottle slipped during in-place pour tilt")
-            self._track_mug_under_mouth()
             if self.scene.contained() >= 8:
                 return
+            if airborne_count >= 8 and not caught:
+                caught = True
+                self._track_mug_under_mouth(airborne_xy=airborne_xy, seconds=.3)
+                self.move(self.scene.command.copy(), 1.0)
+                if self.scene.contained() >= 8:
+                    return
 
     def run(self, plan):
         for action in plan.actions:
@@ -210,8 +241,10 @@ class Expert:
                 except RuntimeError as error:
                     self.report("pour_left_failed", error=str(error))
                 # Left tracking while holding the bottle misses the mug by
-                # ~6 cm. Bring the mug under the actual mouth with the right arm.
+                # ~6 cm. Park the mug on the measured first-burst stream
+                # *before* the bottle tips; a 0.13 s fall cannot be chased.
                 self._track_mug_under_mouth()
+                self._track_mug_under_mouth(seconds=.4)
                 self.report("pour_mug_under", gripper=self.scene.site("left_gripperframe").tolist(),
                             mouth=self.scene.site("bottle_grasp").tolist(),
                             mug=self.scene.body("mug").tolist(),

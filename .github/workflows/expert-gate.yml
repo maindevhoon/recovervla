@@ -4,8 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       attempts:
-        description: Number of consecutive seeds starting at 100
+        description: Number of consecutive seeds
         default: "1"
+      start_seed:
+        description: First seed (104 is the pour candidate)
+        default: "104"
 
 jobs:
   physics:
@@ -23,4 +26,4 @@ jobs:
       - name: Stdlib and command tests
         run: python -m unittest discover -s tests -v
       - name: Physics-only expert gate
-        run: python scripts/validate_expert.py --attempts ${{ github.event.inputs.attempts || '1' }}
+        run: python scripts/validate_expert.py --scope full --start-seed ${{ github.event.inputs.start_seed || '104' }} --attempts ${{ github.event.inputs.attempts || '1' }} --timeout 180

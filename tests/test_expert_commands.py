@@ -71,6 +71,28 @@ class ExpertCommandTests(unittest.TestCase):
         self.assertEqual(kwargs["wrist_flex"], 0.9)
         self.assertEqual(solve.call_args.args[1], "left")
 
+    def test_catch_target_parks_mug_on_measured_first_burst(self):
+        # Seed-104 first dump: beads leave ~4 cm +X / 2 cm -Y of the mouth.
+        # The right gripper is commanded, not the mug COM.
+        from recovervla.sim.expert import catch_gripper_target
+        mouth = np.array([0.092, -0.149, 0.201])
+        offset = np.array([0.01, 0.02, 0.03])
+        lead = np.array([0.044, -0.021, 0.0])
+        target = catch_gripper_target(mouth, offset, vertical_gap=0.08, stream_lead=lead)
+        np.testing.assert_allclose(target[:2], mouth[:2] + lead[:2] + offset[:2])
+        self.assertAlmostEqual(target[2], mouth[2] - 0.08 + offset[2])
+
+    def test_catch_target_uses_live_airborne_xy_when_beads_are_falling(self):
+        from recovervla.sim.expert import catch_gripper_target
+        mouth = np.array([0.092, -0.149, 0.201])
+        offset = np.array([0.0, 0.0, 0.0])
+        lead = np.array([0.044, -0.021, 0.0])
+        airborne = np.array([0.116, -0.171])
+        target = catch_gripper_target(
+            mouth, offset, vertical_gap=0.08, stream_lead=lead, airborne_xy=airborne
+        )
+        np.testing.assert_allclose(target[:2], airborne)
+
 
 if __name__ == "__main__":
     unittest.main()
