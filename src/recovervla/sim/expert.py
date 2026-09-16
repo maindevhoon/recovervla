@@ -153,14 +153,23 @@ class Expert:
                 def above():
                     return self.scene.body("mug") + np.array([0.0, 0.0, 0.10])
                 self.reach("left", above())
+                # Grasp leaves wrist_flex near the +limit, so +1.5 rad is
+                # unreachable. Recenter, then invert through the free range.
+                try:
+                    self.reach("left", above(), wrist_flex=0.0)
+                except RuntimeError as error:
+                    self.report("pour_center_flex_failed", error=str(error))
                 base_flex = float(self.scene.command[3])
-                for delta in (0.5, 1.0, 1.5):
-                    flex = float(np.clip(base_flex + delta, *self.scene.limits[3]))
+                lo, hi = self.scene.limits[3]
+                sign = 1.0 if (hi - base_flex) >= (base_flex - lo) else -1.0
+                travel = max(hi - base_flex, base_flex - lo)
+                for frac in (0.35, 0.7, 1.0):
+                    flex = float(np.clip(base_flex + sign * frac * travel, lo, hi))
                     try:
                         self.reach("left", above(), wrist_flex=flex)
                     except RuntimeError as error:
                         self.report("pour_tilt_failed", flex=flex, error=str(error))
-                self.move(self.scene.command.copy(), 1.5)
+                self.move(self.scene.command.copy(), 2.0)
                 contained = self.scene.contained()
                 self.report("pour_end", contained=contained, snapshot=self.scene.snapshot())
                 if contained < 20:
