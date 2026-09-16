@@ -38,12 +38,12 @@ class Expert:
             self.scene.step(action)
 
     def reach(self, arm, target, wrist_roll=None, approach=None, wrist_flex=None,
-              tolerance=.004):
+              tolerance=.004, align=.94):
         self.check_budget()
         start = monotonic()
         self.report("reach_start", arm=arm, target=np.asarray(target).tolist())
         command = solve(self.scene, arm, target, wrist_roll=wrist_roll, approach=approach,
-                        wrist_flex=wrist_flex, tolerance=tolerance)
+                        wrist_flex=wrist_flex, tolerance=tolerance, align=align)
         self.report("ik_ready", seconds=monotonic() - start)
         self.move(command)
         self.report("reach_end", seconds=monotonic() - start, snapshot=self.scene.snapshot())
@@ -154,14 +154,13 @@ class Expert:
                 def above():
                     return self.scene.body("mug") + np.array([0.0, 0.0, 0.12])
                 self.reach("left", above())
-                # Wrist_flex only has ~1.6 rad of travel, which does not invert
-                # a top-held bottle. Point the tool axis down over the mug so
-                # the mouth faces gravity while the gripper stays put.
-                for approach in ([.4, 0, -.9], [.7, 0, -.7], [0, 0, -1]):
+                # The bottle hangs below the gripper along +tool-X, so a
+                # downward tool axis keeps it upright. Point tool X up to put
+                # the mouth under the beads.
+                for approach in ([.5, 0, .85], [.25, 0, .97], [0, 0, 1]):
                     try:
-                        # 4 mm is inside the 5-DOF singularity near a
-                        # downward pour; 2 cm still keeps the mouth over the mug.
-                        self.reach("left", above(), approach=approach, tolerance=.02)
+                        self.reach("left", above(), approach=approach,
+                                   tolerance=.02, align=.7)
                     except RuntimeError as error:
                         self.report("pour_approach_failed", approach=list(approach),
                                     error=str(error))

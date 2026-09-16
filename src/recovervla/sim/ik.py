@@ -4,7 +4,7 @@ import mujoco
 
 
 def solve(scene, arm, target, max_iterations=200, tolerance=.004, wrist_roll=None,
-          approach=None, wrist_flex=None):
+          approach=None, wrist_flex=None, align=.94):
     model = scene.model
     indices = np.arange(0, 5) if arm == "left" else np.arange(6, 11)
     qadr, dadr = scene.qadr[indices], scene.dadr[indices]
@@ -52,7 +52,7 @@ def solve(scene, arm, target, max_iterations=200, tolerance=.004, wrist_roll=Non
             axis = scratch.site_xmat[site_id].reshape(3, 3)[:, 0]
             # Five-joint SO-101 cannot independently set arbitrary tool yaw.
             # A downward approach cone is sufficient for tray clearance.
-            aligned = direction is None or np.dot(axis, direction) > .94
+            aligned = direction is None or np.dot(axis, direction) > align
             if norm < tolerance and aligned:
                 result = scene.command.copy()
                 result[indices] = scratch.qpos[qadr]
