@@ -19,9 +19,9 @@ For the time-boxed Kaggle path, see [Kaggle fast path](docs/KAGGLE_QUICKSTART.md
 MuJoCo rendering and contact rollouts have been executed on Kaggle. The drawer
 opened through physical contact in 10/10 randomized seeds (100–109). A central
 plate tab was lifted by a two-jaw pinch in 10/10 of the same seeds. Seed 100
-then placed the plate on the table and lifted the mug. Bottle lift and pouring
-remain unvalidated; ACT training has not started. The default evaluation below
-remains a dry run.
+then placed the plate, lifted the mug, and lifted the bottle by a neck tab.
+Pouring still fails: frictionless beads are not retained in the mug. ACT
+training has not started. The default evaluation below remains a dry run.
 
 ```bash
 PYTHONPATH=src python3 -m recovervla.evaluation --seeds 10
