@@ -21,7 +21,7 @@ parser.add_argument("--robot-dir", type=Path, default=Path("artifacts/so101"))
 parser.add_argument("--start-seed", type=int, default=100)
 parser.add_argument("--attempts", type=int, default=3)
 parser.add_argument("--timeout", type=float, default=120)
-parser.add_argument("--scope", choices=("full", "drawer"), default="full")
+parser.add_argument("--scope", choices=("full", "drawer", "plate"), default="full")
 parser.add_argument("--report", type=Path)
 args = parser.parse_args()
 if args.attempts < 1 or args.start_seed < 0 or not math.isfinite(args.timeout) or args.timeout <= 0:
@@ -38,9 +38,12 @@ for seed in range(args.start_seed, args.start_seed + args.attempts):
     expert = Expert(scene, None, progress=progress, timeout=args.timeout)
     row = {"seed": seed, "scope": args.scope, "success": False}
     try:
-        if args.scope == "drawer":
+        if args.scope in ("drawer", "plate"):
             expert._open_drawer()
             expert.history.append("open_drawer:top_drawer")
+            if args.scope == "plate":
+                expert.grasp("left", "plate")
+                expert.history.append("grasp:plate")
         else:
             expert.run(TableSettingPlanner().plan(REFERENCE_INSTRUCTION))
     except (RuntimeError, TimeoutError) as error:

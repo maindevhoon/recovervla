@@ -87,12 +87,22 @@ class Expert:
 
     def grasp(self, arm, target):
         point = self.scene.site(target + "_grasp")
+        self.report("grasp_start", arm=arm, target=target, point=point.tolist(),
+                    body=self.scene.body(target).tolist(), snapshot=self.scene.snapshot())
         self.grip(arm, False)
         self.reach(arm, point + [0, 0, .06])
         self.reach(arm, point)
+        self.report("grasp_before_close", arm=arm, target=target,
+                    body=self.scene.body(target).tolist(), snapshot=self.scene.snapshot())
         self.grip(arm, True)
+        self.report("grasp_closed", arm=arm, target=target,
+                    body=self.scene.body(target).tolist(), contact=self.scene.contact(arm, target),
+                    snapshot=self.scene.snapshot())
         before = self.scene.body(target)[2]
         self.reach(arm, point + [0, 0, .06])
+        self.report("grasp_lifted", arm=arm, target=target,
+                    body=self.scene.body(target).tolist(), contact=self.scene.contact(arm, target),
+                    snapshot=self.scene.snapshot())
         if self.scene.body(target)[2] < before + .02 or not self.scene.contact(arm, target):
             raise RuntimeError(f"Physical grasp failed: {arm} {target}")
 
