@@ -20,7 +20,7 @@ def catch_gripper_target(mouth, gripper_minus_mug, vertical_gap, stream_lead=STR
         mug_xy = mouth[:2] + lead[:2]
     else:
         mug_xy = np.asarray(airborne_xy, float)[:2]
-    mug = np.array([mug_xy[0], mug_xy[1], mouth[2] - vertical_gap])
+    mug = np.array([mug_xy[0], mug_xy[1], max(mouth[2] - vertical_gap, 0.09)])
     return mug + offset
 
 
@@ -165,22 +165,27 @@ class Expert:
                     bottle_contained=self.scene.in_vessel("bottle", .018, .10))
 
     def _tilt_in_place(self):
-        # Lock the flex joint in IK while holding the *live* tool position.
-        # Do not drag the mug during the dump: that moved the stream off the
-        # cup on seeds 104/105. One catch is allowed after beads appear.
-        caught = False
-        for step in range(12):
-            mouth = self.scene.site("left_gripperframe")
-            flex = max(float(self.scene.command[3]) - .06, float(self.scene.limits[3, 0]))
-            if flex >= self.scene.command[3] - 1e-4:
-                break
-            self.reach("left", mouth, wrist_flex=flex, tolerance=.004,
-                       seconds=.35)
+        # Top-down neck grasp: fingers already point down and the bottle +Z
+        # is up. Decrementing wrist_flex (~40 deg on GHA 104) left bottle_up
+        # z at 0.87 and all 19 beads in the bottle. Rotate tool X from down
+        # to up in the XZ plane so the mouth actually inverts.
+        pos = self.scene.site("left_gripperframe")
+        for step, t in enumerate(np.linspace(0.12, 1.0, 10)):
+            angle = np.pi * t
+            approach = np.array([np.sin(angle), 0.0, -np.cos(angle)])
+            try:
+                self.reach("left", pos, approach=approach, align=.5, tolerance=.006,
+                           seconds=.45)
+            except RuntimeError as error:
+                self.report("pour_invert_failed", step=step, error=str(error),
+                            approach=approach.tolist())
+            pos = self.scene.site("left_gripperframe")
             axis = self.scene.data.site("left_gripperframe").xmat.reshape(3, 3)[:, 0]
             bottle_up = self.scene.data.body("bottle").xmat.reshape(3, 3)[:, 2]
             airborne_xy, airborne_count = self._airborne_stream()
-            self.report("pour_tilt_step", step=step, flex=flex, tool_x=axis.tolist(),
+            self.report("pour_tilt_step", step=step, tool_x=axis.tolist(),
                         bottle_up=bottle_up.tolist(),
+                        approach=approach.tolist(),
                         mouth=self.scene.site("bottle_grasp").tolist(),
                         mug=self.scene.body("mug").tolist(),
                         airborne_count=airborne_count,
@@ -192,10 +197,8 @@ class Expert:
                 raise RuntimeError("Bottle slipped during in-place pour tilt")
             if self.scene.contained() >= 8:
                 return
-            if airborne_count >= 8 and not caught:
-                caught = True
+            if bottle_up[2] < .35:
                 self._track_mug_under_mouth(airborne_xy=airborne_xy, seconds=.3)
-                self.move(self.scene.command.copy(), 1.0)
                 if self.scene.contained() >= 8:
                     return
 
