@@ -59,6 +59,15 @@ class ExpertCommandTests(unittest.TestCase):
         self.assertLessEqual(tilted[3], scene.limits[3, 1])
         self.assertAlmostEqual(expert.pour_command(0.4)[3], 0.6)
 
+    def test_reach_forwards_locked_wrist_flex_to_ik(self):
+        scene = FakeScene()
+        expert = Expert(scene, None)
+        with patch("recovervla.sim.expert.solve", return_value=scene.command.copy()) as solve:
+            expert.reach("left", [0.1, -0.06, 0.16], wrist_flex=0.9)
+        kwargs = solve.call_args.kwargs
+        self.assertEqual(kwargs["wrist_flex"], 0.9)
+        self.assertEqual(solve.call_args.args[1], "left")
+
 
 if __name__ == "__main__":
     unittest.main()

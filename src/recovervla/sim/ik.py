@@ -4,7 +4,7 @@ import mujoco
 
 
 def solve(scene, arm, target, max_iterations=200, tolerance=.004, wrist_roll=None,
-          approach=None):
+          approach=None, wrist_flex=None):
     model = scene.model
     indices = np.arange(0, 5) if arm == "left" else np.arange(6, 11)
     qadr, dadr = scene.qadr[indices], scene.dadr[indices]
@@ -19,14 +19,19 @@ def solve(scene, arm, target, max_iterations=200, tolerance=.004, wrist_roll=Non
     # deterministic bent-arm seeds cover elbow-up/down configurations without
     # making reproducibility depend on a random optimizer.
     seeds = [current]
-    if wrist_roll is not None:
+    if wrist_roll is not None or wrist_flex is not None:
         preferred = current.copy()
-        preferred[4] = wrist_roll
+        if wrist_flex is not None:
+            preferred[3] = wrist_flex
+        if wrist_roll is not None:
+            preferred[4] = wrist_roll
         seeds.insert(0, preferred)
     for lift, elbow, wrist in ((-.8, .9, .7), (.8, -.9, -.7),
                                (-1.2, 1.3, .5), (1.2, -1.3, -.5)):
         seed = current.copy()
         seed[1:4] = (lift, elbow, wrist)
+        if wrist_flex is not None:
+            seed[3] = wrist_flex
         if wrist_roll is not None:
             seed[4] = wrist_roll
         seeds.append(seed)
@@ -65,5 +70,8 @@ def solve(scene, arm, target, max_iterations=200, tolerance=.004, wrist_roll=Non
             delta = j.T @ np.linalg.solve(j @ j.T + .0001 * np.eye(len(error)), error)
             scratch.qpos[qadr] = np.clip(scratch.qpos[qadr] + np.clip(delta, -.08, .08),
                                         scene.limits[indices, 0], scene.limits[indices, 1])
+            if wrist_flex is not None:
+                scratch.qpos[qadr[3]] = np.clip(
+                    wrist_flex, scene.limits[indices[3], 0], scene.limits[indices[3], 1])
     raise RuntimeError(f"IK could not reach {arm} target {np.asarray(target).tolist()}; "
                        f"best error {best_error:.4f} m")

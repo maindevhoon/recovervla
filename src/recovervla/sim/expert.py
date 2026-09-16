@@ -37,11 +37,12 @@ class Expert:
                 self.record(frame)
             self.scene.step(action)
 
-    def reach(self, arm, target, wrist_roll=None, approach=None):
+    def reach(self, arm, target, wrist_roll=None, approach=None, wrist_flex=None):
         self.check_budget()
         start = monotonic()
         self.report("reach_start", arm=arm, target=np.asarray(target).tolist())
-        command = solve(self.scene, arm, target, wrist_roll=wrist_roll, approach=approach)
+        command = solve(self.scene, arm, target, wrist_roll=wrist_roll, approach=approach,
+                        wrist_flex=wrist_flex)
         self.report("ik_ready", seconds=monotonic() - start)
         self.move(command)
         self.report("reach_end", seconds=monotonic() - start, snapshot=self.scene.snapshot())
@@ -147,17 +148,19 @@ class Expert:
             elif action.skill == Skill.POUR:
                 self.report("pour_start", contained=self.scene.contained(),
                             snapshot=self.scene.snapshot())
-                # A single 1.5 rad wrist_flex interpolates into the table.
-                # Tip in small steps and re-acquire the mug after each pitch.
-                above = self.scene.body("mug") + np.array([0.0, 0.0, 0.10])
-                self.reach("left", above)
-                for _ in range(4):
-                    self.move(self.pour_command(0.4), 0.6)
+                # Position-only re-acquire unwinds wrist_flex. Lock flex in IK
+                # so the neck stays over the mug while the bottle inverts.
+                def above():
+                    return self.scene.body("mug") + np.array([0.0, 0.0, 0.10])
+                self.reach("left", above())
+                base_flex = float(self.scene.command[3])
+                for delta in (0.5, 1.0, 1.5):
+                    flex = float(np.clip(base_flex + delta, *self.scene.limits[3]))
                     try:
-                        above = self.scene.body("mug") + np.array([0.0, 0.0, 0.10])
-                        self.reach("left", above)
+                        self.reach("left", above(), wrist_flex=flex)
                     except RuntimeError as error:
-                        self.report("pour_reacquire_failed", error=str(error))
+                        self.report("pour_tilt_failed", flex=flex, error=str(error))
+                self.move(self.scene.command.copy(), 1.5)
                 contained = self.scene.contained()
                 self.report("pour_end", contained=contained, snapshot=self.scene.snapshot())
                 if contained < 20:
