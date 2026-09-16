@@ -219,10 +219,19 @@ class Expert:
                 # swings through the mug. Pull toward the robot first.
                 self.reach(arm, np.array([grip[0], -0.10, grip[2]]))
                 self.reach(arm, self.zones[target] + offset + [0, 0, .08])
-                self.reach(arm, self.zones[target] + offset)
+                # A single IK drop to table height does not track in contact.
+                # Lower from the live hover until the object is near the table,
+                # then release. GHA seed 104 opened 9 cm high and the plate slid.
+                for _ in range(6):
+                    if self.scene.body(target)[2] <= self.zones[target][2] + .02:
+                        break
+                    grip = self.scene.site(arm + "_gripperframe")
+                    try:
+                        self.reach(arm, grip + [0, 0, -.02], seconds=.4)
+                    except RuntimeError as error:
+                        self.report("place_lower_failed", error=str(error))
+                        break
                 self.grip(arm, False)
-                # Score the drop, not the retract. On GHA seed 104 the plate
-                # was in-zone while held, then the +Z retract dragged it out.
                 self.move(self.scene.command.copy(), .4)
                 placed = self.scene.body(target)
                 if np.linalg.norm(placed[:2] - self.zones[target][:2]) > .05:
