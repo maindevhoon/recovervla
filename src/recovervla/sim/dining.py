@@ -40,6 +40,8 @@ def decorate(root, world, assets):
     ET.SubElement(world, 'camera', name='hero', pos='1.05 -1.35 1.02',
                   xyaxes='.79 .61 0 -.32 .42 .85', fovy='43')
     ET.SubElement(world, 'camera', name='overhead', pos='0 0 1.65', xyaxes='1 0 0 0 1 0', fovy='48')
+    ET.SubElement(world, 'camera', name='workspace', pos='0 -.58 .52',
+                  xyaxes='1 0 0 0 .55 .83', fovy='52')
 
     # Visual planks sit just above the unchanged collision tabletop (z=.025).
     for i in range(9):

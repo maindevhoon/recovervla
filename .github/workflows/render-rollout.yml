@@ -29,10 +29,15 @@ jobs:
       - name: Record seed rollout
         run: |
           mkdir -p artifacts/preview
+          seed=${{ github.event.inputs.seed || '104' }}
           python scripts/render_rollout.py \
-            --seed ${{ github.event.inputs.seed || '104' }} \
-            --output artifacts/preview/seed-${{ github.event.inputs.seed || '104' }}.mp4 \
+            --seed "$seed" \
+            --camera workspace \
+            --video-fps 20 \
+            --output artifacts/preview/seed-${seed}-workspace.mp4 \
             --timeout 180
+          ffmpeg -y -loglevel error -i artifacts/preview/seed-${seed}-workspace.mp4 \
+            -vf "fps=1/4,scale=640:-1" artifacts/preview/seed-${seed}-still-%02d.jpg || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -40,4 +45,5 @@ jobs:
           path: |
             artifacts/preview/seed-*.mp4
             artifacts/preview/seed-*.json
+            artifacts/preview/seed-*.jpg
           if-no-files-found: error
