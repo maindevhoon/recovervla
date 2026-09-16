@@ -221,15 +221,18 @@ class Expert:
                 self.reach(arm, self.zones[target] + offset + [0, 0, .08])
                 self.reach(arm, self.zones[target] + offset)
                 self.grip(arm, False)
-                try:
-                    self.reach(arm, self.scene.site(arm + "_gripperframe") + [0, 0, .06])
-                except RuntimeError as error:
-                    self.report("place_retract_failed", error=str(error))
+                # Score the drop, not the retract. On GHA seed 104 the plate
+                # was in-zone while held, then the +Z retract dragged it out.
+                self.move(self.scene.command.copy(), .4)
                 placed = self.scene.body(target)
                 if np.linalg.norm(placed[:2] - self.zones[target][:2]) > .05:
                     raise RuntimeError(
                         f"Place did not reach the table zone: {target} at {placed.tolist()}"
                     )
+                try:
+                    self.reach(arm, self.scene.site(arm + "_gripperframe") + [0, 0, .06])
+                except RuntimeError as error:
+                    self.report("place_retract_failed", error=str(error))
             elif action.skill == Skill.POUR:
                 self.report("pour_start", contained=self.scene.contained(),
                             snapshot=self.scene.snapshot())
