@@ -139,9 +139,21 @@ class Expert:
             self.reach("left", mouth, wrist_flex=flex, tolerance=.004,
                        seconds=.4)
             axis = self.scene.data.site("left_gripperframe").xmat.reshape(3, 3)[:, 0]
+            bottle_up = self.scene.data.body("bottle").xmat.reshape(3, 3)[:, 2]
+            mug = self.scene.body("mug")
+            beads = np.array([self.scene.body(f"water_{i:02}") for i in range(60)])
+            local = (beads - self.scene.body("bottle")) @ self.scene.data.body(
+                "bottle").xmat.reshape(3, 3)
+            in_bottle = ((np.linalg.norm(local[:, :2], axis=1) < .018) &
+                         (local[:, 2] > .007) & (local[:, 2] < .10))
+            airborne = beads[(~in_bottle) & (beads[:, 2] > mug[2] + .04) &
+                             (beads[:, 2] < self.scene.site("bottle_grasp")[2] + .04)]
             self.report("pour_tilt_step", step=step, flex=flex, tool_x=axis.tolist(),
+                        bottle_up=bottle_up.tolist(),
                         mouth=self.scene.site("bottle_grasp").tolist(),
                         mug=self.scene.body("mug").tolist(),
+                        airborne_count=len(airborne),
+                        airborne_xy=airborne[:, :2].mean(axis=0).tolist() if len(airborne) else None,
                         contained=self.scene.contained(),
                         bottle_contained=self.scene.in_vessel("bottle", .018, .10),
                         bottle_contact=self.scene.contact("left", "bottle"))
