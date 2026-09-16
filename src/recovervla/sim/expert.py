@@ -35,11 +35,11 @@ class Expert:
                 self.record(frame)
             self.scene.step(action)
 
-    def reach(self, arm, target, wrist_roll=None):
+    def reach(self, arm, target, wrist_roll=None, approach=None):
         self.check_budget()
         start = monotonic()
         self.report("reach_start", arm=arm, target=np.asarray(target).tolist())
-        command = solve(self.scene, arm, target, wrist_roll=wrist_roll)
+        command = solve(self.scene, arm, target, wrist_roll=wrist_roll, approach=approach)
         self.report("ik_ready", seconds=monotonic() - start)
         self.move(command)
         self.report("reach_end", seconds=monotonic() - start, snapshot=self.scene.snapshot())
@@ -58,18 +58,18 @@ class Expert:
         behind = point + np.array([0.0, 0.022, 0.004])
         front = point + np.array([0.0, -0.075, 0.0])
         last_error = None
-        for roll in (None, 1.2, -1.2, 2.0, -2.0):
+        for roll in (None,):
             self.report("drawer_attempt", wrist_roll=roll)
             try:
                 self.grip("left", False)
                 try:
-                    self.reach("left", behind + np.array([0.0, 0.0, 0.04]), wrist_roll=roll)
+                    self.reach("left", behind + np.array([0.0, 0.0, 0.08]), approach=[0, 0, -1])
                 except RuntimeError:
                     pass
-                self.reach("left", behind, wrist_roll=roll)
+                self.reach("left", behind, approach=[0, 0, -1])
                 self.grip("left", True)
                 for frac in np.linspace(0.2, 1.0, 6):
-                    self.reach("left", behind + frac * (front - behind), wrist_roll=roll)
+                    self.reach("left", behind + frac * (front - behind), approach=[0, 0, -1])
                     if float(self.scene.data.joint("drawer_slide").qpos[0]) >= 0.05:
                         self.grip("left", False)
                         return

@@ -3,12 +3,17 @@ import numpy as np
 import mujoco
 
 
-def solve(scene, arm, target, max_iterations=200, tolerance=.004, wrist_roll=None):
+def solve(scene, arm, target, max_iterations=200, tolerance=.004, wrist_roll=None,
+          approach=None):
     model = scene.model
     indices = np.arange(0, 5) if arm == "left" else np.arange(6, 11)
     qadr, dadr = scene.qadr[indices], scene.dadr[indices]
     site_id = model.site(arm + "_gripperframe").id
     jac = np.zeros((3, model.nv))
+    jacrot = np.zeros_like(jac)
+    direction = None if approach is None else np.asarray(approach, dtype=float)
+    if direction is not None:
+        direction = direction / np.linalg.norm(direction)
     current = scene.data.qpos[qadr].copy()
     # A straight/zero SO-101 pose is close to a Jacobian singularity. These
     # deterministic bent-arm seeds cover elbow-up/down configurations without
@@ -39,13 +44,19 @@ def solve(scene, arm, target, max_iterations=200, tolerance=.004, wrist_roll=Non
             error = np.asarray(target) - scratch.site_xpos[site_id]
             norm = float(np.linalg.norm(error))
             best_error = min(best_error, norm)
-            if norm < tolerance:
+            axis = scratch.site_xmat[site_id].reshape(3, 3)[:, 0]
+            aligned = direction is None or np.dot(axis, direction) > .995
+            if norm < tolerance and aligned:
                 result = scene.command.copy()
                 result[indices] = scratch.qpos[qadr]
                 return result
-            mujoco.mj_jacSite(model, scratch, jac, None, site_id)
+            mujoco.mj_jacSite(model, scratch, jac, jacrot, site_id)
             j = jac[:, dadr]
-            delta = j.T @ np.linalg.solve(j @ j.T + .002 * np.eye(3), error)
+            if direction is not None:
+                # Site X points from the wrist toward the fingertips.
+                j = np.vstack((j, .1 * jacrot[:, dadr]))
+                error = np.r_[error, .1 * np.cross(axis, direction)]
+            delta = j.T @ np.linalg.solve(j @ j.T + .0001 * np.eye(len(error)), error)
             scratch.qpos[qadr] = np.clip(scratch.qpos[qadr] + np.clip(delta, -.08, .08),
                                         scene.limits[indices, 0], scene.limits[indices, 1])
     raise RuntimeError(f"IK could not reach {arm} target {np.asarray(target).tolist()}; "
