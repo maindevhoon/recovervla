@@ -63,8 +63,9 @@ debugging: use `-u` and streamed stdout so failures remain visible.
 
 For independent drawer-seed logs and a summary report, use
 `python scripts/validate_batch.py --scope drawer --attempts 10 --workers 2 --output /kaggle/working/drawer-check`.
-The 100–109 drawer batch passed on Kaggle. This does not validate plate grasp or
-the rest of the full task.
+The 100–109 drawer batch passed on Kaggle. The same seeds then passed a
+plate-scope lift using the central pinch tab. That still does not validate
+placement, mug grasp, pouring, or an encoded demonstration.
 
 Run physics and rendering regressions remotely:
 
