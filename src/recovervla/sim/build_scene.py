@@ -46,7 +46,8 @@ def build(robot_dir: Path, seed: int):
     ET.SubElement(root.find("option"), "flag", nativeccd="disable")
     assets = ET.SubElement(root, "asset")
     defaults = ET.SubElement(root, "default")
-    ET.SubElement(defaults, "geom", friction="0.8 0.005 0.0001")
+    ET.SubElement(defaults, "geom", friction="0.8 0.005 0.0001",
+                  solref="0.004 1", solimp="0.95 0.99 0.001")
     world = ET.SubElement(root, "worldbody")
     actuators = ET.SubElement(root, "actuator")
     # The upstream zero pose extends along local +X. Face both arms toward

@@ -45,14 +45,16 @@ def solve(scene, arm, target, max_iterations=200, tolerance=.004, wrist_roll=Non
             norm = float(np.linalg.norm(error))
             best_error = min(best_error, norm)
             axis = scratch.site_xmat[site_id].reshape(3, 3)[:, 0]
-            aligned = direction is None or np.dot(axis, direction) > .995
+            # Five-joint SO-101 cannot independently set arbitrary tool yaw.
+            # A downward approach cone is sufficient for tray clearance.
+            aligned = direction is None or np.dot(axis, direction) > .94
             if norm < tolerance and aligned:
                 result = scene.command.copy()
                 result[indices] = scratch.qpos[qadr]
                 return result
             mujoco.mj_jacSite(model, scratch, jac, jacrot, site_id)
             j = jac[:, dadr]
-            if direction is not None:
+            if direction is not None and not aligned:
                 # Site X points from the wrist toward the fingertips.
                 # Aligning one axis constrains two rotational DOFs. Leave
                 # rotation around that axis free: SO-101 has only five arm
