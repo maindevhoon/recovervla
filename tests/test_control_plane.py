@@ -11,6 +11,18 @@ class PlannerTests(unittest.TestCase):
         self.assertTrue(any(action.arm is Arm.BOTH for action in plan.actions))
         self.assertIs(plan.actions[-1].skill, Skill.VERIFY)
 
+    def test_place_plan_skips_pour(self) -> None:
+        plan = TableSettingPlanner.place_plan()
+        skills = [action.skill for action in plan.actions]
+        self.assertEqual(
+            skills,
+            [Skill.OPEN_DRAWER, Skill.GRASP, Skill.PLACE, Skill.GRASP, Skill.PLACE],
+        )
+        self.assertNotIn(Skill.POUR, skills)
+        self.assertNotIn(Skill.VERIFY, skills)
+        self.assertEqual(plan.actions[2].target, "plate")
+        self.assertEqual(plan.actions[4].target, "mug")
+
     def test_incomplete_instruction_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             TableSettingPlanner().plan("Put the plate down")

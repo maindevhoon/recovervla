@@ -36,6 +36,7 @@ def main():
                         help="Capture one frame per N 20 Hz control steps")
     parser.add_argument("--video-fps", type=int, default=10)
     parser.add_argument("--timeout", type=int, default=180)
+    parser.add_argument("--scope", choices=("full", "place"), default="place")
     args = parser.parse_args()
     if args.seed < 0 or min(args.width, args.height, args.sample_every,
                             args.video_fps, args.timeout) < 1:
@@ -74,7 +75,10 @@ def main():
     expert = Expert(scene, record=None, progress=progress, timeout=args.timeout)
     error = None
     try:
-        expert.run(TableSettingPlanner().plan(REFERENCE_INSTRUCTION))
+        if args.scope == "place":
+            expert.run(TableSettingPlanner.place_plan())
+        else:
+            expert.run(TableSettingPlanner().plan(REFERENCE_INSTRUCTION))
     except (RuntimeError, TimeoutError, ValueError) as exc:
         error = f"{type(exc).__name__}: {exc}"
         print(f"rollout stopped: {error}", flush=True)

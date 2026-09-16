@@ -7,8 +7,11 @@ on:
         description: Number of consecutive seeds
         default: "1"
       start_seed:
-        description: First seed (104 is the pour candidate)
+        description: First seed
         default: "104"
+      scope:
+        description: full, place, plate, drawer, or bottle
+        default: "place"
 
 jobs:
   physics:
@@ -26,4 +29,4 @@ jobs:
       - name: Stdlib and command tests
         run: python -m unittest discover -s tests -v
       - name: Physics-only expert gate
-        run: python scripts/validate_expert.py --scope full --start-seed ${{ github.event.inputs.start_seed || '104' }} --attempts ${{ github.event.inputs.attempts || '1' }} --timeout 180
+        run: python scripts/validate_expert.py --scope ${{ github.event.inputs.scope || 'place' }} --start-seed ${{ github.event.inputs.start_seed || '104' }} --attempts ${{ github.event.inputs.attempts || '1' }} --timeout 180

@@ -27,3 +27,17 @@ class TableSettingPlanner:
         plan.validate()
         return plan
 
+    @staticmethod
+    def place_plan() -> TaskPlan:
+        """Drawer plus plate and mug placement. No pour, no particle verify."""
+        return TaskPlan(
+            instruction="Open the drawer, place the plate, then place the mug.",
+            actions=(
+                Action(Skill.OPEN_DRAWER, Arm.LEFT, "top_drawer", verify="drawer_open"),
+                Action(Skill.GRASP, Arm.LEFT, "plate", verify="plate_grasped"),
+                Action(Skill.PLACE, Arm.LEFT, "plate", "table_place_zone", "plate_placed"),
+                Action(Skill.GRASP, Arm.RIGHT, "mug", verify="mug_grasped"),
+                Action(Skill.PLACE, Arm.RIGHT, "mug", "table_mug_zone", "mug_placed"),
+            ),
+        )
+

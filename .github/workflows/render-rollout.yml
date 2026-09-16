@@ -6,6 +6,9 @@ on:
       seed:
         description: Scene seed to record
         default: "104"
+      scope:
+        description: full includes pour; place is drawer plus plate and mug
+        default: "place"
 
 jobs:
   video:
@@ -32,6 +35,7 @@ jobs:
           seed=${{ github.event.inputs.seed || '104' }}
           python scripts/render_rollout.py \
             --seed "$seed" \
+            --scope ${{ github.event.inputs.scope || 'place' }} \
             --camera workspace \
             --video-fps 20 \
             --output artifacts/preview/seed-${seed}-workspace.mp4 \
