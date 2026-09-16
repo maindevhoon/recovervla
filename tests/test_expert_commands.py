@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 try:
     import mujoco  # noqa: F401
@@ -23,6 +24,16 @@ class FakeScene:
 
 @unittest.skipUnless(Expert is not None, "numpy/mujoco extra not installed")
 class ExpertCommandTests(unittest.TestCase):
+    def test_expired_budget_stops_before_advancing_physics(self):
+        scene = FakeScene()
+        initial = scene.command.copy()
+        with patch("recovervla.sim.expert.monotonic", return_value=10):
+            expert = Expert(scene, None, timeout=1)
+        with patch("recovervla.sim.expert.monotonic", return_value=12):
+            with self.assertRaises(TimeoutError):
+                expert.grip("left", True)
+        np.testing.assert_array_equal(initial, scene.command)
+
     def test_grip_uses_actuator_limits(self):
         scene = FakeScene()
         expert = Expert(scene, None)

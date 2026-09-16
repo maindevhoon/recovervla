@@ -15,6 +15,7 @@ def main():
     parser.add_argument("--episodes", type=int, default=1)
     parser.add_argument("--max-attempts", type=int, default=10)
     parser.add_argument("--start-seed", type=int, default=0)
+    parser.add_argument("--episode-timeout", type=float, default=600)
     args = parser.parse_args()
     if platform.system() != "Linux":
         parser.error("Collection is configured for remote Linux hosts")
@@ -48,9 +49,9 @@ def main():
                 row["variation"] = scene.variation
                 def record(frame):
                     ds.add_frame({**frame, "task": REFERENCE_INSTRUCTION})
-                expert = Expert(scene, record)
+                expert = Expert(scene, record, timeout=args.episode_timeout)
                 expert.run(TableSettingPlanner().plan(REFERENCE_INSTRUCTION))
-            except RuntimeError as error:
+            except (RuntimeError, TimeoutError) as error:
                 row["error"] = str(error)
                 ds.clear_episode_buffer()
             else:
