@@ -39,7 +39,8 @@ def build(robot_dir: Path, seed: int):
     root = ET.Element("mujoco", model="recovervla")
     ET.SubElement(root, "compiler", angle="radian", autolimits="true")
     ET.SubElement(root, "option", timestep="0.002", integrator="implicitfast",
-                  iterations="50", cone="elliptic", impratio="10", noslip_iterations="3")
+                  iterations="50", cone="elliptic", impratio="10", solver="CG",
+                  noslip_iterations="0")
     assets = ET.SubElement(root, "asset")
     defaults = ET.SubElement(root, "default")
     ET.SubElement(defaults, "geom", friction="0.8 0.005 0.0001")

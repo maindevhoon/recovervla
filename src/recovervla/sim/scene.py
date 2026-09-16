@@ -104,4 +104,10 @@ class Scene:
             "left_gripper_cmd": float(self.command[5]),
             "ncon": int(self.data.ncon),
             "contacts": contacts,
+            "deepest_contact": min(
+                ({"distance": float(c.dist), "geoms": [
+                    mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, g) or
+                    self.model.body(int(self.model.geom_bodyid[g])).name
+                    for g in (c.geom1, c.geom2)]} for c in self.data.contact),
+                key=lambda c: c["distance"], default=None),
         }
