@@ -39,7 +39,9 @@ class Expert:
         self.check_budget()
         start = monotonic()
         self.report("reach_start", arm=arm, target=np.asarray(target).tolist())
-        self.move(solve(self.scene, arm, target, wrist_roll=wrist_roll))
+        command = solve(self.scene, arm, target, wrist_roll=wrist_roll)
+        self.report("ik_ready", seconds=monotonic() - start)
+        self.move(command)
         self.report("reach_end", seconds=monotonic() - start, snapshot=self.scene.snapshot())
 
     def grip(self, arm, closed):

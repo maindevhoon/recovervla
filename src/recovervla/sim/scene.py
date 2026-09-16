@@ -88,7 +88,8 @@ class Scene:
         gripper = self.site("left_gripperframe")
         handle = self.site("drawer_grasp")
         contacts = []
-        for contact in self.data.contact[:min(int(self.data.ncon), 8)]:
+        for index in range(min(int(self.data.ncon), 8)):
+            contact = self.data.contact[index]
             contacts.append([mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, g) or ""
                              for g in (contact.geom1, contact.geom2)])
         return {
