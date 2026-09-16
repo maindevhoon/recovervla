@@ -151,16 +151,24 @@ class Expert:
                             snapshot=self.scene.snapshot())
                 # Position-only re-acquire unwinds wrist_flex. Lock flex in IK
                 # so the neck stays over the mug while the bottle inverts.
-                def above():
-                    return self.scene.body("mug") + np.array([0.0, 0.0, 0.12])
-                self.reach("left", above())
-                # Three large orientation jumps swing the bottle in an arc and
-                # dump beads on the table. Flip in small Cartesian-held steps.
-                for t in np.linspace(0.15, 1.0, 6):
+                above = self.scene.body("mug") + np.array([0.0, 0.0, 0.12])
+                self.reach("left", above)
+                grip = self.scene.site("left_gripperframe")
+                mug = self.scene.body("mug")
+                self.report("pour_over_mug", gripper=grip.tolist(), mug=mug.tolist(),
+                            snapshot=self.scene.snapshot())
+                if np.linalg.norm(grip[:2] - mug[:2]) > .04:
+                    raise RuntimeError(
+                        f"Pour start not over mug: gripper {grip.tolist()} mug {mug.tolist()}")
+                # Retargeting mug+offset during the flip commanded poses the
+                # live arm never reached, so beads dumped on the table. Invert
+                # in place at the actual gripper.
+                for t in np.linspace(0.2, 1.0, 6):
+                    target = self.scene.site("left_gripperframe")
                     approach = np.array([(1.0 - t) * .6, 0.0, 0.55 + 0.45 * t])
                     approach = approach / np.linalg.norm(approach)
                     try:
-                        self.reach("left", above(), approach=approach, align=.6,
+                        self.reach("left", target, approach=approach, align=.6,
                                    seconds=0.7)
                     except RuntimeError as error:
                         self.report("pour_approach_failed", t=float(t),
