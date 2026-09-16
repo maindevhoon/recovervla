@@ -102,6 +102,7 @@ class Scene:
             "handle_distance": float(np.linalg.norm(gripper - handle)),
             "drawer_contact": self.contact("left", "drawer"),
             "left_gripper_cmd": float(self.command[5]),
+            "objects": {name: self.body(name).tolist() for name in ("plate", "mug", "bottle")},
             "ncon": int(self.data.ncon),
             "contacts": contacts,
             "deepest_contact": min(

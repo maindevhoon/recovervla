@@ -119,7 +119,12 @@ class Expert:
                 offset = self.scene.site(arm + "_gripperframe") - self.scene.body(target)
                 # The drawer handle top is ~11 cm; a 6 cm lift leaves the
                 # plate scraping it, so the carry never leaves the tray.
-                self.reach(arm, self.scene.site(arm + "_gripperframe") + [0, 0, .08])
+                grip = self.scene.site(arm + "_gripperframe")
+                self.reach(arm, grip + [0, 0, .08])
+                grip = self.scene.site(arm + "_gripperframe")
+                # Joint-space interpolation from the tray to the place zone
+                # swings through the mug. Pull toward the robot first.
+                self.reach(arm, np.array([grip[0], -0.10, grip[2]]))
                 self.reach(arm, self.zones[target] + offset + [0, 0, .08])
                 self.reach(arm, self.zones[target] + offset)
                 self.grip(arm, False)
@@ -127,8 +132,11 @@ class Expert:
                     self.reach(arm, self.scene.site(arm + "_gripperframe") + [0, 0, .06])
                 except RuntimeError as error:
                     self.report("place_retract_failed", error=str(error))
-                if np.linalg.norm(self.scene.body(target)[:2] - self.zones[target][:2]) > .05:
-                    raise RuntimeError(f"Place did not reach the table zone: {target}")
+                placed = self.scene.body(target)
+                if np.linalg.norm(placed[:2] - self.zones[target][:2]) > .05:
+                    raise RuntimeError(
+                        f"Place did not reach the table zone: {target} at {placed.tolist()}"
+                    )
             elif action.skill == Skill.POUR:
                 self.reach("left", self.scene.body("mug") + [0, 0, .16])
                 command = self.scene.command.copy()
