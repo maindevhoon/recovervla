@@ -152,17 +152,18 @@ class Expert:
                 # Position-only re-acquire unwinds wrist_flex. Lock flex in IK
                 # so the neck stays over the mug while the bottle inverts.
                 above = self.scene.body("mug") + np.array([0.0, 0.0, 0.12])
-                self.reach("left", above)
-                grip = self.scene.site("left_gripperframe")
-                mug = self.scene.body("mug")
-                self.report("pour_over_mug", gripper=grip.tolist(), mug=mug.tolist(),
+                try:
+                    self.reach("left", above)
+                except RuntimeError as error:
+                    self.report("pour_left_failed", error=str(error))
+                # Left tracking while holding the bottle misses the mug by
+                # ~6 cm. Bring the mug under the actual mouth with the right arm.
+                mouth = self.scene.site("left_gripperframe")
+                offset = self.scene.site("right_gripperframe") - self.scene.body("mug")
+                self.reach("right", mouth + offset + np.array([0.0, 0.0, -0.08]))
+                self.report("pour_mug_under", gripper=self.scene.site("left_gripperframe").tolist(),
+                            mug=self.scene.body("mug").tolist(),
                             snapshot=self.scene.snapshot())
-                if np.linalg.norm(grip[:2] - mug[:2]) > .04:
-                    raise RuntimeError(
-                        f"Pour start not over mug: gripper {grip.tolist()} mug {mug.tolist()}")
-                # Retargeting mug+offset during the flip commanded poses the
-                # live arm never reached, so beads dumped on the table. Invert
-                # in place at the actual gripper.
                 for t in np.linspace(0.2, 1.0, 6):
                     target = self.scene.site("left_gripperframe")
                     approach = np.array([(1.0 - t) * .6, 0.0, 0.55 + 0.45 * t])
@@ -173,6 +174,13 @@ class Expert:
                     except RuntimeError as error:
                         self.report("pour_approach_failed", t=float(t),
                                     approach=approach.tolist(), error=str(error))
+                    mouth = self.scene.site("left_gripperframe")
+                    offset = (self.scene.site("right_gripperframe")
+                              - self.scene.body("mug"))
+                    try:
+                        self.reach("right", mouth + offset + np.array([0.0, 0.0, -0.08]))
+                    except RuntimeError as error:
+                        self.report("pour_mug_track_failed", error=str(error))
                 self.move(self.scene.command.copy(), 2.0)
                 contained = self.scene.contained()
                 axis = self.scene.data.site("left_gripperframe").xmat.reshape(3, 3)[:, 0]
