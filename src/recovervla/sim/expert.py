@@ -123,7 +123,7 @@ class Expert:
         # mouth. This is an expert demonstration target, not a hidden teleport.
         mouth = self.scene.site("bottle_grasp")
         offset = self.scene.site("right_gripperframe") - self.scene.body("mug")
-        stream_offset = np.array([.065, -.06, 0.])
+        stream_offset = np.array([.035, -.05, 0.])
         self.reach("right", mouth + offset + stream_offset + np.array([0., 0., -vertical_gap]),
                    seconds=.6)
         self.report("pour_mug_track", mouth=self.scene.site("bottle_grasp").tolist(),
