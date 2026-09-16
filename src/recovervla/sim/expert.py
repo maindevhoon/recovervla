@@ -116,11 +116,14 @@ class Expert:
         return command
 
     def _track_mug_under_mouth(self, vertical_gap=.08):
-        mouth = self.scene.site("left_gripperframe")
+        # The gripper frame is not the bottle opening after the tab pivots
+        # within the jaws. Track the opening in the bottle's own frame.
+        mouth = self.scene.site("bottle_grasp")
         offset = self.scene.site("right_gripperframe") - self.scene.body("mug")
         self.reach("right", mouth + offset + np.array([0., 0., -vertical_gap]),
                    seconds=.6)
-        self.report("pour_mug_track", mouth=self.scene.site("left_gripperframe").tolist(),
+        self.report("pour_mug_track", mouth=self.scene.site("bottle_grasp").tolist(),
+                    gripper=self.scene.site("left_gripperframe").tolist(),
                     mug=self.scene.body("mug").tolist(),
                     contained=self.scene.contained(),
                     bottle_contained=self.scene.in_vessel("bottle", .018, .10))
@@ -137,7 +140,8 @@ class Expert:
                        seconds=.4)
             axis = self.scene.data.site("left_gripperframe").xmat.reshape(3, 3)[:, 0]
             self.report("pour_tilt_step", step=step, flex=flex, tool_x=axis.tolist(),
-                        mouth=self.scene.site("left_gripperframe").tolist(),
+                        mouth=self.scene.site("bottle_grasp").tolist(),
+                        mug=self.scene.body("mug").tolist(),
                         contained=self.scene.contained(),
                         bottle_contained=self.scene.in_vessel("bottle", .018, .10),
                         bottle_contact=self.scene.contact("left", "bottle"))
@@ -192,6 +196,7 @@ class Expert:
                 # ~6 cm. Bring the mug under the actual mouth with the right arm.
                 self._track_mug_under_mouth()
                 self.report("pour_mug_under", gripper=self.scene.site("left_gripperframe").tolist(),
+                            mouth=self.scene.site("bottle_grasp").tolist(),
                             mug=self.scene.body("mug").tolist(),
                             snapshot=self.scene.snapshot())
                 self._tilt_in_place()
