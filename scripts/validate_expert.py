@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import platform
 import sys
+import math
 from time import monotonic
 
 if platform.system() != "Linux":
@@ -23,6 +24,8 @@ parser.add_argument("--timeout", type=float, default=120)
 parser.add_argument("--scope", choices=("full", "drawer"), default="full")
 parser.add_argument("--report", type=Path)
 args = parser.parse_args()
+if args.attempts < 1 or args.start_seed < 0 or not math.isfinite(args.timeout) or args.timeout <= 0:
+    parser.error("Require positive attempts and timeout, and nonnegative start seed")
 rows = []
 for seed in range(args.start_seed, args.start_seed + args.attempts):
     started = monotonic()
@@ -46,6 +49,7 @@ for seed in range(args.start_seed, args.start_seed + args.attempts):
         row["success"] = True
     finally:
         row["completed_skills"] = expert.history
+        row["elapsed_seconds"] = round(monotonic() - started, 3)
         row["snapshot"] = scene.snapshot()
         scene.close()
         rows.append(row)

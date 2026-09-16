@@ -2,6 +2,7 @@
 import argparse
 import json
 import platform
+import math
 from pathlib import Path
 from .evaluation import REFERENCE_INSTRUCTION
 from .planner import TableSettingPlanner
@@ -21,6 +22,8 @@ def main():
         parser.error("Collection is configured for remote Linux hosts")
     if args.episodes < 1 or args.max_attempts < args.episodes or args.start_seed < 0:
         parser.error("Require positive episodes, max-attempts >= episodes, nonnegative seed")
+    if not math.isfinite(args.episode_timeout) or args.episode_timeout <= 0:
+        parser.error("episode-timeout must be finite and positive")
     if args.start_seed <= 10009 and args.start_seed + args.max_attempts > 10000:
         parser.error("Seeds 10000–10009 are reserved for evaluation")
     output = args.output.resolve()

@@ -42,13 +42,32 @@ display(Image(filename="artifacts/preview/hero.png", width=720))
 ## Cell 3 — fast physics-only expert gate
 
 ```python
-subprocess.run([sys.executable, "scripts/validate_expert.py", "--attempts", "3"], check=True)
+subprocess.run([
+    sys.executable, "-u", "scripts/validate_expert.py", "--attempts", "3",
+    "--timeout", "120", "--report", "/kaggle/working/full-physics.json"
+], check=True, timeout=450)
 ```
 
 This skips camera rendering and video encoding, making failed-waypoint tuning much
 faster. `validate_expert.py` constructs the scene without a MuJoCo renderer, so the
-gate does not need EGL. Continue only after at least one complete physical sequence
-succeeds. On GitHub, `expert-gate` runs the same command on Ubuntu.
+gate does not need EGL. It streams waypoint timings and contacts and returns
+nonzero if any requested seed fails. Continue only after the complete physical
+sequence passes. On GitHub, `expert-gate` runs the same script on Ubuntu.
+
+For drawer regression only, add `--scope drawer --attempts 10`. A drawer-only
+pass is not permission to start full-task collection. `--timeout` bounds the
+expert per episode, while the outer subprocess timeout also covers scene setup.
+The collector has a separate `--episode-timeout` (default 600 seconds) because
+rendering and encoding are included. Never capture all subprocess output while
+debugging: use `-u` and streamed stdout so failures remain visible.
+
+Run physics and rendering regressions remotely:
+
+```python
+os.environ["RECOVERVLA_REMOTE_TESTS"] = "1"
+os.environ["PYTHONPATH"] = str(repo / "src")
+subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"], check=True)
+```
 
 ## Cell 4 — one encoded demonstration gate
 

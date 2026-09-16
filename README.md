@@ -16,9 +16,10 @@ See [remote setup, collection, and L4 training](docs/REMOTE.md).
 For the enhanced dining-room scene, see [Colab rendering instructions](docs/DINING_PREVIEW.md).
 For the time-boxed Kaggle path, see [Kaggle fast path](docs/KAGGLE_QUICKSTART.md).
 
-Simulation code and ACT training launchers are present but have not been executed.
-Contact grasp and pouring behavior require remote validation before collecting
-training data. The default evaluation below remains a dry run.
+MuJoCo rendering and contact rollouts have been executed on Kaggle. The drawer
+has opened through physical contact, and object support passed ten randomized
+seeds. Full plate grasp, placement, and pouring remain unvalidated; ACT training
+has not started. The default evaluation below remains a dry run.
 
 ```bash
 PYTHONPATH=src python3 -m recovervla.evaluation --seeds 10
