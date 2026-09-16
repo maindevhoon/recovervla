@@ -117,14 +117,19 @@ class Expert:
 
     def _track_mug_under_mouth(self, vertical_gap=.08):
         # The gripper frame is not the bottle opening after the tab pivots
-        # within the jaws. Track the opening in the bottle's own frame.
+        # within the jaws. Moreover, on remote physical seeds 104 and 105,
+        # airborne beads consistently travelled to +X/-Y of the opening.
+        # Place the mug under that observed stream, not directly under the
+        # mouth. This is an expert demonstration target, not a hidden teleport.
         mouth = self.scene.site("bottle_grasp")
         offset = self.scene.site("right_gripperframe") - self.scene.body("mug")
-        self.reach("right", mouth + offset + np.array([0., 0., -vertical_gap]),
+        stream_offset = np.array([.065, -.06, 0.])
+        self.reach("right", mouth + offset + stream_offset + np.array([0., 0., -vertical_gap]),
                    seconds=.6)
         self.report("pour_mug_track", mouth=self.scene.site("bottle_grasp").tolist(),
                     gripper=self.scene.site("left_gripperframe").tolist(),
                     mug=self.scene.body("mug").tolist(),
+                    stream_offset=stream_offset.tolist(),
                     contained=self.scene.contained(),
                     bottle_contained=self.scene.in_vessel("bottle", .018, .10))
 
