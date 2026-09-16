@@ -164,23 +164,10 @@ class Expert:
                 self.report("pour_mug_under", gripper=self.scene.site("left_gripperframe").tolist(),
                             mug=self.scene.body("mug").tolist(),
                             snapshot=self.scene.snapshot())
-                for t in np.linspace(0.2, 1.0, 6):
-                    target = self.scene.site("left_gripperframe")
-                    approach = np.array([(1.0 - t) * .6, 0.0, 0.55 + 0.45 * t])
-                    approach = approach / np.linalg.norm(approach)
-                    try:
-                        self.reach("left", target, approach=approach, align=.6,
-                                   seconds=0.7)
-                    except RuntimeError as error:
-                        self.report("pour_approach_failed", t=float(t),
-                                    approach=approach.tolist(), error=str(error))
-                    mouth = self.scene.site("left_gripperframe")
-                    offset = (self.scene.site("right_gripperframe")
-                              - self.scene.body("mug"))
-                    try:
-                        self.reach("right", mouth + offset + np.array([0.0, 0.0, -0.08]))
-                    except RuntimeError as error:
-                        self.report("pour_mug_track_failed", error=str(error))
+                # Approach-IK invert dragged both arms off the table. The mug
+                # is already under the mouth; tip with wrist_flex only.
+                for _ in range(4):
+                    self.move(self.pour_command(0.3), 0.8)
                 self.move(self.scene.command.copy(), 2.0)
                 contained = self.scene.contained()
                 axis = self.scene.data.site("left_gripperframe").xmat.reshape(3, 3)[:, 0]
